@@ -26,6 +26,7 @@ namespace lab2
         [UI] private CheckButton _paint = null;
         [UI] private CheckButton _edges = null;
         [UI] private ComboBoxText _proj = null;
+        [UI] private ComboBoxText _mouse = null;
         
         [UI] private Adjustment _m11 = null;
         [UI] private Adjustment _m12 = null;
@@ -228,6 +229,9 @@ namespace lab2
             _proj.Append("Izom", "Изометрия");
             _proj.Changed += ProjOnChanged;
 
+            _mouse.Append("shift", "Перемещение");
+            _mouse.Append("rotation", "Вращение");
+            
             DeleteEvent += Window_DeleteEvent;
         }
 
@@ -256,12 +260,27 @@ namespace lab2
         {
             if (motion)
             {
-                _shiftX.Value += ((float) args.Event.X - Oldx) / 10;
-                _shiftY.Value += ((float) args.Event.Y - Oldy) / 10;
-                _drawingArea.QueueDraw();
-                
-                Oldx = (float) args.Event.X;
-                Oldy = (float) args.Event.Y;
+                if (_mouse.ActiveText == "Перемещение")
+                {
+                    _shiftX.Value += ((float) args.Event.X - Oldx) / 10;
+                    _shiftY.Value += ((float) args.Event.Y - Oldy) / 10;
+                    _drawingArea.QueueDraw();
+
+                    Oldx = (float) args.Event.X;
+                    Oldy = (float) args.Event.Y;
+                }
+
+                if (_mouse.ActiveText == "Вращение")
+                {
+                    _rotationY.Value += ((float) args.Event.X - Oldx) / 10;
+                    _rotationX.Value += -((float) args.Event.Y - Oldy) / 10;
+                    
+                    _drawingArea.QueueDraw();
+
+                    Oldx = (float) args.Event.X;
+                    Oldy = (float) args.Event.Y;
+                }
+
             }
         }
         
