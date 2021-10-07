@@ -272,8 +272,8 @@ namespace lab2
 
                 if (_mouse.ActiveText == "Вращение")
                 {
-                    _rotationY.Value += ((float) args.Event.X - Oldx) / 10;
-                    _rotationX.Value += -((float) args.Event.Y - Oldy) / 10;
+                    _rotationY.Value += -((float) args.Event.X - Oldx) / 10;
+                    _rotationX.Value += ((float) args.Event.Y - Oldy) / 10;
                     
                     _drawingArea.QueueDraw();
 
