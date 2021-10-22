@@ -130,6 +130,8 @@ namespace lab3
         {
         }
 
+        CairoSurface surface;
+        
         void Figure()
         {
             Verticies = new List<List<Vertex>>();
@@ -157,8 +159,9 @@ namespace lab3
                 }
                 sumtheta = 0;
             }
-            
+
             Polygons = new List<Polygon>();
+
 
             //Крышка
             for (int i = 1; i < Verticies.Count - 1; ++i)
@@ -264,6 +267,7 @@ namespace lab3
         private MainWindow(Builder builder) : base(builder.GetRawOwnedObject("MainWindow"))
         {
             builder.Autoconnect(this);
+            surface = new CairoSurface(_drawingArea);
             
             Figure();
             CalculateMatrix();
@@ -945,16 +949,21 @@ namespace lab3
                     if (_light.ActiveText == "Затенение Гуро")
                     {
 
-                        Composite(cr, Multiplication(Polygons[i].Color, Polygons[i].points[0].Int), Triangle[0],
-                            Triangle[1], Triangle[2]);
-                        cr.Operator = Operator.Add;
-                        Composite(cr, Multiplication(Polygons[i].Color, Polygons[i].points[1].Int), Triangle[1],
-                            Triangle[2], Triangle[0]);
-                        Composite(cr, Multiplication(Polygons[i].Color, Polygons[i].points[2].Int), Triangle[2],
-                            Triangle[0], Triangle[1]);
-                        cr.NewPath();
-                        cr.Operator = Operator.Over;
-
+                        // Composite(cr, Multiplication(Polygons[i].Color, Polygons[i].points[0].Int), Triangle[0],
+                        //     Triangle[1], Triangle[2]);
+                        // cr.Operator = Operator.Add;
+                        // Composite(cr, Multiplication(Polygons[i].Color, Polygons[i].points[1].Int), Triangle[1],
+                        //     Triangle[2], Triangle[0]);
+                        // Composite(cr, Multiplication(Polygons[i].Color, Polygons[i].points[2].Int), Triangle[2],
+                        //     Triangle[0], Triangle[1]);
+                        // cr.NewPath();
+                        // cr.Operator = Operator.Over;
+                        surface.BeginUpdate(cr);
+                        surface.DrawTriangle(Multiplication(Polygons[i].Color, Polygons[i].points[0].Int), Triangle[0], Triangle[1], Triangle[2]);;
+                        surface.DrawTriangle(Multiplication(Polygons[i].Color, Polygons[i].points[1].Int), Triangle[1], Triangle[2], Triangle[0]);
+                        surface.DrawTriangle(Multiplication(Polygons[i].Color, Polygons[i].points[2].Int), Triangle[2], Triangle[0], Triangle[1]);
+                        surface.EndUpdate();
+                        
                     }
 
                     if (_light.ActiveText != "Затенение Гуро") {
