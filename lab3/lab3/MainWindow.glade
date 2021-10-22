@@ -28,7 +28,7 @@
   </object>
   <object class="GtkAdjustment" id="_d">
     <property name="upper">100</property>
-    <property name="value">2</property>
+    <property name="value">0.20000000000000001</property>
     <property name="step_increment">0.01</property>
     <property name="page_increment">10</property>
   </object>
@@ -76,7 +76,6 @@
   </object>
   <object class="GtkAdjustment" id="_k">
     <property name="upper">100</property>
-    <property name="value">1</property>
     <property name="step_increment">0.01</property>
     <property name="page_increment">10</property>
   </object>
@@ -1806,7 +1805,7 @@
                         </child>
                         <child>
                           <object class="GtkCheckButton" id="_vertexNormal">
-                            <property name="label" translatable="yes">Нормали от вершин</property>
+                            <property name="label" translatable="yes">                                                     Нормали от вершин</property>
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
                             <property name="receives_default">False</property>

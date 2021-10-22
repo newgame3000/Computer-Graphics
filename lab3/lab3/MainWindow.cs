@@ -333,7 +333,8 @@ namespace lab3
             _p.ValueChanged += ValueChanged2;
             _d.ValueChanged += ValueChanged2;
             _k.ValueChanged += ValueChanged2;
-
+            _lightlines.Clicked += ValueChanged2;
+            
             _drawingArea.ScrollEvent += (o, args) =>
             {
                 if (args.Event.Direction == ScrollDirection.Down)
@@ -665,7 +666,7 @@ namespace lab3
             
             Vector3 dot = new Vector3((float)_lx.Value - start.X, (float)_ly.Value - start.Y,(float)_lz.Value);
             
-            Normalize(dot);
+            dot = Normalize(dot);
             ans *= Vector3.Dot(dot, a.NormalInWorldSpace);
             ans.X = Math.Max(0, ans.X);
             ans.Y = Math.Max(0, ans.Y);
@@ -685,7 +686,7 @@ namespace lab3
             
             Vector2 start = new Vector2((a.points[0].PointInWorldSpace.X + a.points[1].PointInWorldSpace.X + a.points[2].PointInWorldSpace.X) / 3, (a.points[0].PointInWorldSpace.Y + a.points[1].PointInWorldSpace.Y + a.points[2].PointInWorldSpace.Y) / 3 );
             Vector3 l = new Vector3((float)_lx.Value - start.X, (float)_ly.Value - start.Y,(float)_lz.Value);
-            Normalize(l);
+            l = Normalize(l);
 
             if (Vector3.Dot(l, a.NormalInWorldSpace) < 1e-6)
             {
@@ -697,7 +698,7 @@ namespace lab3
             r = 2 * a.NormalInWorldSpace * (Vector3.Dot(l, a.NormalInWorldSpace) / Vector3.Dot(a.NormalInWorldSpace, a.NormalInWorldSpace));
             r = r - l;
             
-            Normalize(r);
+            r = Normalize(r);
 
             float cosRL = 1;
             
@@ -735,7 +736,7 @@ namespace lab3
                         n += Verticies[i][j].polygons[k].NormalInWorldSpace;
                     }
 
-                    Normalize(n);
+                    n = Normalize(n);
                     Verticies[i][j].NormalInWorldSpace = n;
                 }
             }
@@ -757,7 +758,7 @@ namespace lab3
             
                     Vector3 dot = new Vector3((float)_lx.Value - start.X, (float)_ly.Value - start.Y,(float)_lz.Value);
             
-                    Normalize(dot);
+                    dot = Normalize(dot);
                     ans *= Vector3.Dot(dot, Verticies[i][j].NormalInWorldSpace);
                     ans.X = Math.Max(0, ans.X);
                     ans.Y = Math.Max(0, ans.Y);
@@ -782,7 +783,7 @@ namespace lab3
                     
                     Vector2 start = new Vector2(Verticies[i][j].PointInWorldSpace.X, Verticies[i][j].PointInWorldSpace.Y);
                     Vector3 l = new Vector3((float)_lx.Value - start.X, (float)_ly.Value - start.Y,(float)_lz.Value);
-                    Normalize(l);
+                    l = Normalize(l);
 
                     if (Vector3.Dot(l, Verticies[i][j].NormalInWorldSpace) < 1e-6)
                     {
@@ -794,7 +795,7 @@ namespace lab3
                     r = 2 * Verticies[i][j].NormalInWorldSpace * (Vector3.Dot(l, Verticies[i][j].NormalInWorldSpace) / Vector3.Dot(Verticies[i][j].NormalInWorldSpace, Verticies[i][j].NormalInWorldSpace));
                     r = r - l;
                     
-                    Normalize(r);
+                    r = Normalize(r);
 
                     float cosRL = 1;
                     
@@ -820,31 +821,6 @@ namespace lab3
                      Verticies[j][j].Int += ans / (float)(_d.Value + _k.Value);
                 }
             }
-        }
-
-        void Composite(Context cr, Vector3 ci, Vector2 pi, Vector2 pj, Vector2 pk)
-        {
-            var origins = cr.Matrix;
-            var pattern = new RadialGradient(0, 0, 0, 0, 0, 1);
-            pattern.AddColorStop(1, new Cairo.Color(ci.X, ci.Y, ci.Z));
-            pattern.AddColorStop(0, new Cairo.Color(0, 0, 0));
-            var transform = new Matrix(
-                /* [1,1] sx */  (pj.X - pi.X) * .5 * Math.Sqrt(3), 
-                /* [2,1]    */  (pj.Y - pi.Y) * .5 * Math.Sqrt(3),
-                /* [1,2]    */  (pk.X - pi.X) - .5 * (pj.X - pi.X),
-                /* [2,2] sy */  (pk.Y - pi.Y) - .5 * (pj.Y - pi.Y), 
-                /* [1,3] tx */   pi.X,
-                /* [2,3] ty */   pi.Y 
-            );
-            cr.Transform(transform);
-            cr.SetSource(pattern);
-            if (!_edges.Active)
-            {
-                cr.Antialias = Antialias.None;
-            }
-            cr.FillPreserve();
-            pattern.Dispose();
-            cr.Matrix = origins;
         }
 
         void DrawVertexNormals(Context cr)
@@ -983,9 +959,9 @@ namespace lab3
                     Vector3 r = new Vector3();
                     
                     r = 2 * Polygons[i].NormalInWorldSpace * Vector3.Dot(l, Polygons[i].NormalInWorldSpace) / Vector3.Dot(Polygons[i].NormalInWorldSpace, Polygons[i].NormalInWorldSpace);
-                    r = l - r;
+                    r = r - l;
             
-                    Normalize(r);
+                    r = Normalize(r);
                     
                     start = Vector2.Transform(start, ViewMatrix);
                     l = Vector3.Transform(l, ViewMatrix);
@@ -1022,22 +998,8 @@ namespace lab3
                         picture = View(Polygons[i].points[j].PointInWorldSpace);
                         Triangle.Add(new Vector2(picture.X, picture.Y));
                     }
-
-                    // Composite(cr, Multiplication(Polygons[i].Color, Polygons[i].points[0].Int), Triangle[0],
-                    //     Triangle[1], Triangle[2]);
-                    // cr.Operator = Operator.Add;
-                    // Composite(cr, Multiplication(Polygons[i].Color, Polygons[i].points[1].Int), Triangle[1],
-                    //     Triangle[2], Triangle[0]);
-                    // Composite(cr, Multiplication(Polygons[i].Color, Polygons[i].points[2].Int), Triangle[2],
-                    //     Triangle[0], Triangle[1]);
-                    // cr.NewPath();
-                    // cr.Operator = Operator.Over;
-                    surface.DrawTriangle(Multiplication(Polygons[i].Color, Polygons[i].points[0].Int), Triangle[0],
-                        Triangle[1], Triangle[2]);
-                    surface.DrawTriangle(Multiplication(Polygons[i].Color, Polygons[i].points[1].Int), Triangle[1],
-                        Triangle[2], Triangle[0]);
-                    surface.DrawTriangle(Multiplication(Polygons[i].Color, Polygons[i].points[2].Int), Triangle[2],
-                        Triangle[0], Triangle[1]);
+                    
+                    surface.DrawTriangle(Multiplication(Polygons[i].Color, Polygons[i].points[0].Int), Triangle[0], Multiplication(Polygons[i].Color, Polygons[i].points[1].Int), Triangle[1], Multiplication(Polygons[i].Color, Polygons[i].points[2].Int), Triangle[2]);
 
                 }
                 surface.EndUpdate();

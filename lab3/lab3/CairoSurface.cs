@@ -1,3 +1,7 @@
+// Режим совместимости для работы на рабочем столе с глубиной цвета отличной от 32 бит. 
+// Если используется рабочий 32 битный рабочий стол то можно отключить - будет чуть быстрее работать.
+#define COMPATIBLE_MODE
+
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
@@ -23,27 +27,44 @@ namespace lab3
             get { return _height; }
         }
         protected override  Clipper Clip {
-            get { return _Clipper; }
+            get { return _clipper; }
         }
 
         public override void* ImageBits {
-            get { return (void*) _pixbuf.Pixels; }
+            get { return _imgptr; }
         }
 
         private readonly DrawingArea _widget;
         private int _winpos_x1, _winpos_y1, _width, _height;
-        private Clipper _Clipper = null;
+        private Clipper _clipper;
         private Pixbuf _pixbuf;
         private Context cr;
         private Widget _window;
-
+        private void* _imgptr;
+        
+        #if COMPATIBLE_MODE
+        private int _prev_width, _prev_height;
+        #endif
+        
         public CairoSurface(DrawingArea widget)
         {
+            _imgptr = null;
             _widget = widget;
+            _clipper = null;
+            _prev_width = _prev_height = -1;
             _widget.SizeAllocated += (o, args) => {
                 _width  = args.Allocation.Width;
                 _height = args.Allocation.Height;
-                _Clipper = new Clipper(this);
+                _clipper = new Clipper(this);
+                #if COMPATIBLE_MODE
+                if (0 != ((_width ^ _prev_width) | (_height ^ _prev_height))) {
+                    _prev_width = _width;
+                    _prev_height = _height;
+                    if (_imgptr != null)
+                        Marshal.FreeHGlobal((IntPtr)_imgptr);
+                    _imgptr = (void*)Marshal.AllocHGlobal((_width * _height << 2) + 1);
+                }
+                #endif
             };
             _window = _widget;
             while (_window.Parent != null)
@@ -58,6 +79,19 @@ namespace lab3
             var target = (this.cr = cr).GetTarget();
             _widget.TranslateCoordinates(_window, 0, 0, out _winpos_x1, out _winpos_y1);
             _pixbuf = new Pixbuf(target, _winpos_x1, _winpos_y1, _width, _height);
+            #if !COMPATIBLE_MODE
+            _imgptr = (void*)_pixbuf.Pixels;
+            #else
+            if (_pixbuf.BitsPerSample != 8)
+                throw new NotImplementedException("Unsupported BitsPerSample");
+            PixelCast pxcast;
+            switch (_pixbuf.NChannels) {
+                case 4: pxcast = PixelCast.XRGB8888_XRGB8888; break;
+                case 3: pxcast = PixelCast.XRGB0888_XRGB8888; break;
+                default: throw new NotImplementedException("Unsupported NChannels");
+            }
+            BitBlt(pxcast, (void*)_pixbuf.Pixels, _imgptr, _pixbuf.Rowstride,_width << 2, _width, _height);
+            #endif
             target.Dispose();
         }
 
@@ -65,6 +99,15 @@ namespace lab3
         {
             if (cr == null)
                 throw new Exception("EndUpdate() может быть вызван только после BeginUpdate()");
+            
+            PixelCast pxcast;
+            switch (_pixbuf.NChannels) {
+                case 4: pxcast = PixelCast.XRGB8888_XRGB8888; break;
+                case 3: pxcast = PixelCast.XRGB8888_XRGB0888; break;
+                default: throw new NotImplementedException("Unsupported NChannels");
+            }
+            BitBlt(pxcast, _imgptr, (void*)_pixbuf.Pixels, _width << 2, _pixbuf.Rowstride, _width, _height);
+            
             CairoHelper.SetSourcePixbuf(cr, _pixbuf, 0, 0);
             cr.Paint();
             cr = null;
@@ -89,6 +132,44 @@ namespace lab3
             return argb;
         } }
 
+        private enum PixelCast {
+            XRGB8888_XRGB8888,
+            XRGB8888_XRGB0888,
+            XRGB0888_XRGB8888
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void BitBlt(PixelCast pxcast, void* src, void* dst, int src_stride, int dst_stride, int width, int heigh)
+        { unchecked {
+            var psrc = (byte*)src;
+            var pdst = (byte*)dst;
+            
+            int src_pxlen, dst_pxlen;
+            switch ((int)pxcast) {
+                case (int)PixelCast.XRGB8888_XRGB8888: src_pxlen =    dst_pxlen = 4; break;
+                case (int)PixelCast.XRGB8888_XRGB0888: src_pxlen = 4; dst_pxlen = 3; break;
+                case (int)PixelCast.XRGB0888_XRGB8888: src_pxlen = 3; dst_pxlen = 4; break;
+                default: throw new NotImplementedException("Unsupported PixelCast");
+            }
+            
+            int src_nextline = src_stride - width * src_pxlen;
+            int dst_nextline = dst_stride - width * dst_pxlen;
+            switch ((int) pxcast) {
+                case (int)PixelCast.XRGB8888_XRGB8888:
+                case (int)PixelCast.XRGB8888_XRGB0888: 
+                    for (; 0 != heigh--; psrc += src_nextline, pdst += dst_nextline) 
+                    for (int x = width; 0 != x--; psrc += src_pxlen, pdst += dst_pxlen) 
+                        *(int*)pdst = *(int*)psrc;
+                    return;
+                case (int)PixelCast.XRGB0888_XRGB8888: 
+                    for (; 0 != heigh--; psrc += src_nextline, pdst += dst_nextline) 
+                    for (int x = width; 0 != x--; psrc += src_pxlen, pdst += dst_pxlen) 
+                        *(int*)pdst = (int)0xFF000000 | *(int*)psrc;
+                    return;
+                default: throw new NotImplementedException("Unsupported PixelCast");
+            }
+        }}
+        
         public void DrawTriangle(Vector3 color, Vector2 p1, Vector2 p2, Vector2 p3)
         {
             DrawTriangle(this, GetRgb(color), p1.X, p1.Y, p2.X, p2.Y, p3.X, p3.Y);
