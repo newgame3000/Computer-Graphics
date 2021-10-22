@@ -903,8 +903,9 @@ namespace lab3
                 }
 
                 Diffuse();
-
                 Specular();
+                
+                
             }
             
             
@@ -930,7 +931,7 @@ namespace lab3
                 picture = View(Polygons[i].points[0].PointInWorldSpace);
                 cr.LineTo(picture.X, picture.Y);
 
-                if (_paint.ActiveText == "Случайные цвета" || _paint.ActiveText == "Выбранный цвет")
+                if (_paint.ActiveText == "Случайные цвета" || _paint.ActiveText == "Выбранный цвет" && _light.ActiveText != "Затенение Гуро")
                 {
 
                     Vector3 colors = new Vector3(Polygons[i].Color.X, Polygons[i].Color.Y, Polygons[i].Color.Z);
@@ -945,38 +946,17 @@ namespace lab3
 
                         colors = Multiplication(I, colors);
                     }
-
-                    if (_light.ActiveText == "Затенение Гуро")
-                    {
-
-                        // Composite(cr, Multiplication(Polygons[i].Color, Polygons[i].points[0].Int), Triangle[0],
-                        //     Triangle[1], Triangle[2]);
-                        // cr.Operator = Operator.Add;
-                        // Composite(cr, Multiplication(Polygons[i].Color, Polygons[i].points[1].Int), Triangle[1],
-                        //     Triangle[2], Triangle[0]);
-                        // Composite(cr, Multiplication(Polygons[i].Color, Polygons[i].points[2].Int), Triangle[2],
-                        //     Triangle[0], Triangle[1]);
-                        // cr.NewPath();
-                        // cr.Operator = Operator.Over;
-                        surface.BeginUpdate(cr);
-                        surface.DrawTriangle(Multiplication(Polygons[i].Color, Polygons[i].points[0].Int), Triangle[0], Triangle[1], Triangle[2]);;
-                        surface.DrawTriangle(Multiplication(Polygons[i].Color, Polygons[i].points[1].Int), Triangle[1], Triangle[2], Triangle[0]);
-                        surface.DrawTriangle(Multiplication(Polygons[i].Color, Polygons[i].points[2].Int), Triangle[2], Triangle[0], Triangle[1]);
-                        surface.EndUpdate();
-                        
+                    
+                    
+                    cr.SetSourceRGB(colors.X, colors.Y, colors.Z);
+                    if (_edges.Active)
+                    { 
+                        cr.FillPreserve();
                     }
-
-                    if (_light.ActiveText != "Затенение Гуро") {
-                        cr.SetSourceRGB(colors.X, colors.Y, colors.Z);
-                        if (_edges.Active)
-                        { 
-                            cr.FillPreserve();
-                        }
-                        else
-                        {
-                            cr.Antialias = Antialias.None;
-                            cr.Fill();
-                        }
+                    else
+                    {
+                        cr.Antialias = Antialias.None;
+                        cr.Fill();
                     }
                 }
 
@@ -1021,6 +1001,50 @@ namespace lab3
                 } 
                 
             }
+            
+            if (_light.ActiveText == "Затенение Гуро")
+            {
+                surface.BeginUpdate(cr);
+                for (int i = 0; i < Polygons.Count; ++i)
+                {
+
+                    if (!_all.Active && Hide(Polygons[i]))
+                    {
+                        continue;
+                    }
+
+                    List<Vector2> Triangle = new List<Vector2>();
+
+                    Vector4 picture = View(Polygons[i].points[0].PointInWorldSpace);
+                    Triangle.Add(new Vector2(picture.X, picture.Y));
+                    for (int j = 1; j < Polygons[i].points.Count; ++j)
+                    {
+                        picture = View(Polygons[i].points[j].PointInWorldSpace);
+                        Triangle.Add(new Vector2(picture.X, picture.Y));
+                    }
+
+                    // Composite(cr, Multiplication(Polygons[i].Color, Polygons[i].points[0].Int), Triangle[0],
+                    //     Triangle[1], Triangle[2]);
+                    // cr.Operator = Operator.Add;
+                    // Composite(cr, Multiplication(Polygons[i].Color, Polygons[i].points[1].Int), Triangle[1],
+                    //     Triangle[2], Triangle[0]);
+                    // Composite(cr, Multiplication(Polygons[i].Color, Polygons[i].points[2].Int), Triangle[2],
+                    //     Triangle[0], Triangle[1]);
+                    // cr.NewPath();
+                    // cr.Operator = Operator.Over;
+                    surface.DrawTriangle(Multiplication(Polygons[i].Color, Polygons[i].points[0].Int), Triangle[0],
+                        Triangle[1], Triangle[2]);
+                    surface.DrawTriangle(Multiplication(Polygons[i].Color, Polygons[i].points[1].Int), Triangle[1],
+                        Triangle[2], Triangle[0]);
+                    surface.DrawTriangle(Multiplication(Polygons[i].Color, Polygons[i].points[2].Int), Triangle[2],
+                        Triangle[0], Triangle[1]);
+
+                }
+                surface.EndUpdate();
+            }
+            
+            
+            
             if (_light.ActiveText != "Нет" && _paint.ActiveText != "Нет")
             {
                  cr.SetSourceRGB(1, 0.0, 0.0);
