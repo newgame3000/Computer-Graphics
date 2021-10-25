@@ -662,9 +662,8 @@ namespace lab3
 
             ans = Multiplication(kd, il);
 
-            Vector2 start = new Vector2((a.points[0].PointInWorldSpace.X + a.points[1].PointInWorldSpace.X + a.points[2].PointInWorldSpace.X) / 3, (a.points[0].PointInWorldSpace.Y + a.points[1].PointInWorldSpace.Y + a.points[2].PointInWorldSpace.Y) / 3 );
-            
-            Vector3 dot = new Vector3((float)_lx.Value - start.X, (float)_ly.Value - start.Y,(float)_lz.Value);
+             Vector3 start = new Vector3((a.points[0].PointInWorldSpace.X + a.points[1].PointInWorldSpace.X + a.points[2].PointInWorldSpace.X) / 3, (a.points[0].PointInWorldSpace.Y + a.points[1].PointInWorldSpace.Y + a.points[2].PointInWorldSpace.Y) / 3, (a.points[0].PointInWorldSpace.Z + a.points[1].PointInWorldSpace.Z + a.points[2].PointInWorldSpace.Z) / 3 );
+            Vector3 dot = new Vector3((float)_lx.Value - start.X, (float)_ly.Value - start.Y,(float)_lz.Value - start.Z);
             
             dot = Normalize(dot);
             ans *= Vector3.Dot(dot, a.NormalInWorldSpace);
@@ -672,8 +671,10 @@ namespace lab3
             ans.Y = Math.Max(0, ans.Y);
             ans.Z = Math.Max(0, ans.Z);
             
-            
-            return ans / (float)(_d.Value + _k.Value);
+            dot.X = (float)_lx.Value - a.NormalInWorldSpace.X - start.X;
+            dot.Y = (float)_ly.Value - a.NormalInWorldSpace.Y - start.Y;
+            dot.Z = (float)_lz.Value - a.NormalInWorldSpace.Z - start.Z;
+            return ans/ (float)(dot.Length() / 50 + _k.Value);
         }
 
         Vector3 Specular(Polygon a)
@@ -684,8 +685,8 @@ namespace lab3
             
             ans = Multiplication(ks, il);
             
-            Vector2 start = new Vector2((a.points[0].PointInWorldSpace.X + a.points[1].PointInWorldSpace.X + a.points[2].PointInWorldSpace.X) / 3, (a.points[0].PointInWorldSpace.Y + a.points[1].PointInWorldSpace.Y + a.points[2].PointInWorldSpace.Y) / 3 );
-            Vector3 l = new Vector3((float)_lx.Value - start.X, (float)_ly.Value - start.Y,(float)_lz.Value);
+            Vector3 start = new Vector3((a.points[0].PointInWorldSpace.X + a.points[1].PointInWorldSpace.X + a.points[2].PointInWorldSpace.X) / 3, (a.points[0].PointInWorldSpace.Y + a.points[1].PointInWorldSpace.Y + a.points[2].PointInWorldSpace.Y) / 3, (a.points[0].PointInWorldSpace.Z + a.points[1].PointInWorldSpace.Z + a.points[2].PointInWorldSpace.Z) / 3 );
+            Vector3 l = new Vector3((float)_lx.Value - start.X, (float)_ly.Value - start.Y,(float)_lz.Value - start.Z);
             l = Normalize(l);
 
             if (Vector3.Dot(l, a.NormalInWorldSpace) < 1e-6)
@@ -720,8 +721,10 @@ namespace lab3
             ans.Y = Math.Max(0, ans.Y);
             ans.Z = Math.Max(0, ans.Z);
             
-            
-            return ans/ (float)(_d.Value + _k.Value);
+            l.X = (float)_lx.Value - a.NormalInWorldSpace.X - start.X;
+            l.Y = (float)_ly.Value - a.NormalInWorldSpace.Y - start.Y;
+            l.Z = (float)_lz.Value - a.NormalInWorldSpace.Z - start.Z;
+            return ans/ (float)(l.Length()/ 50+ _k.Value);
         }
 
         void VertexNormals()
@@ -736,6 +739,9 @@ namespace lab3
                         n += Verticies[i][j].polygons[k].NormalInWorldSpace;
                     }
 
+                    n.X = n.X / Verticies[i][j].polygons.Count;
+                    n.Y = n.Y / Verticies[i][j].polygons.Count;
+                    n.Z = n.Z / Verticies[i][j].polygons.Count;
                     n = Normalize(n);
                     Verticies[i][j].NormalInWorldSpace = n;
                 }
@@ -754,17 +760,20 @@ namespace lab3
                     
                     ans = Multiplication(kd, il);
 
-                    Vector2 start = new Vector2(Verticies[i][j].PointInWorldSpace.X, Verticies[i][j].PointInWorldSpace.Y);
+                    Vector3 start = new Vector3(Verticies[i][j].PointInWorldSpace.X, Verticies[i][j].PointInWorldSpace.Y, Verticies[i][j].PointInWorldSpace.Z);
             
-                    Vector3 dot = new Vector3((float)_lx.Value - start.X, (float)_ly.Value - start.Y,(float)_lz.Value);
+                    Vector3 dot = new Vector3((float)_lx.Value - start.X, (float)_ly.Value - start.Y,(float)_lz.Value - start.Z);
             
                     dot = Normalize(dot);
                     ans *= Vector3.Dot(dot, Verticies[i][j].NormalInWorldSpace);
                     ans.X = Math.Max(0, ans.X);
                     ans.Y = Math.Max(0, ans.Y);
                     ans.Z = Math.Max(0, ans.Z);
-                    
-                    Verticies[i][j].Int += ans / (float)(_d.Value + _k.Value);
+
+                    dot.X = (float)_lx.Value - Verticies[i][j].PointInWorldSpace.X;
+                    dot.Y = (float)_ly.Value - Verticies[i][j].PointInWorldSpace.Y;
+                    dot.Z = (float)_lz.Value - Verticies[i][j].PointInWorldSpace.Z;
+                    Verticies[i][j].Int += (ans / (float)(dot.Length() / 30  + _k.Value));
                 }
             }
         }
@@ -781,15 +790,15 @@ namespace lab3
                     
                     ans = Multiplication(ks, il);
                     
-                    Vector2 start = new Vector2(Verticies[i][j].PointInWorldSpace.X, Verticies[i][j].PointInWorldSpace.Y);
-                    Vector3 l = new Vector3((float)_lx.Value - start.X, (float)_ly.Value - start.Y,(float)_lz.Value);
+                    Vector3 start = new Vector3(Verticies[i][j].PointInWorldSpace.X, Verticies[i][j].PointInWorldSpace.Y, Verticies[i][j].PointInWorldSpace.Z);
+                    Vector3 l = new Vector3((float)_lx.Value - start.X, (float)_ly.Value - start.Y,(float)_lz.Value - start.Z);
                     l = Normalize(l);
 
                     if (Vector3.Dot(l, Verticies[i][j].NormalInWorldSpace) < 1e-6)
                     {
-                        return;
+                        continue;
                     }
-                    
+                                        
                     Vector3 r = new Vector3();
 
                     r = 2 * Verticies[i][j].NormalInWorldSpace * (Vector3.Dot(l, Verticies[i][j].NormalInWorldSpace) / Vector3.Dot(Verticies[i][j].NormalInWorldSpace, Verticies[i][j].NormalInWorldSpace));
@@ -798,7 +807,8 @@ namespace lab3
                     r = Normalize(r);
 
                     float cosRL = 1;
-                    
+
+                    bool end = false;
                     for (int k = 0; k < _p.Value; ++k)
                     {
                         double t = Vector3.Dot(r, l);
@@ -808,17 +818,25 @@ namespace lab3
                         }
                         else
                         {
-                            return ;
+                            end = true;
+                            break;
                         }
                     }
 
+                    if (end)
+                    {
+                        continue;
+                    }
+                    
                     ans *= cosRL;
                     ans.X = Math.Max(0, ans.X);
                     ans.Y = Math.Max(0, ans.Y);
                     ans.Z = Math.Max(0, ans.Z);
-                    
-                    
-                     Verticies[j][j].Int += ans / (float)(_d.Value + _k.Value);
+
+                    l.X = (float)_lx.Value - start.X;
+                    l.Y = (float)_ly.Value - start.Y;
+                    l.Z = (float)_lz.Value - start.Z;
+                    Verticies[i][j].Int += (ans / (float)(l.Length() / 30  + _k.Value));
                 }
             }
         }
@@ -880,8 +898,6 @@ namespace lab3
 
                 Diffuse();
                 Specular();
-                
-                
             }
             
             
@@ -1028,12 +1044,11 @@ namespace lab3
                     DrawNormals(cr, Polygons[i]);
                 }
             }
-
-
+            
             if (_vertexNormal.Active)
-                {
-                    DrawVertexNormals(cr);
-                }
+            {
+                DrawVertexNormals(cr);
+            }
         }
 
         private void Window_DeleteEvent(object sender, DeleteEventArgs a)

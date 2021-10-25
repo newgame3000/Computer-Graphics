@@ -16,7 +16,7 @@
   </object>
   <object class="GtkAdjustment" id="_bl">
     <property name="upper">1</property>
-    <property name="value">0.80000000000000004</property>
+    <property name="value">1</property>
     <property name="step_increment">0.01</property>
     <property name="page_increment">10</property>
   </object>
@@ -34,25 +34,25 @@
   </object>
   <object class="GtkAdjustment" id="_g">
     <property name="upper">1</property>
-    <property name="value">0.5</property>
+    <property name="value">1</property>
     <property name="step_increment">0.01</property>
     <property name="page_increment">10</property>
   </object>
   <object class="GtkAdjustment" id="_iab">
     <property name="upper">1</property>
-    <property name="value">0.5</property>
+    <property name="value">1</property>
     <property name="step_increment">0.01</property>
     <property name="page_increment">10</property>
   </object>
   <object class="GtkAdjustment" id="_iag">
     <property name="upper">1</property>
-    <property name="value">0.5</property>
+    <property name="value">1</property>
     <property name="step_increment">0.01</property>
     <property name="page_increment">10</property>
   </object>
   <object class="GtkAdjustment" id="_iar">
     <property name="upper">1</property>
-    <property name="value">0.5</property>
+    <property name="value">1</property>
     <property name="step_increment">0.01</property>
     <property name="page_increment">10</property>
   </object>
@@ -81,74 +81,70 @@
   </object>
   <object class="GtkAdjustment" id="_kab">
     <property name="upper">1</property>
-    <property name="value">0.5</property>
     <property name="step_increment">0.01</property>
     <property name="page_increment">10</property>
   </object>
   <object class="GtkAdjustment" id="_kag">
     <property name="upper">1</property>
-    <property name="value">0.5</property>
+    <property name="value">1</property>
     <property name="step_increment">0.01</property>
     <property name="page_increment">10</property>
   </object>
   <object class="GtkAdjustment" id="_kar">
     <property name="upper">1</property>
-    <property name="value">0.5</property>
     <property name="step_increment">0.01</property>
     <property name="page_increment">10</property>
   </object>
   <object class="GtkAdjustment" id="_kdb">
     <property name="upper">1</property>
-    <property name="value">0.5</property>
+    <property name="value">1</property>
     <property name="step_increment">0.01</property>
     <property name="page_increment">10</property>
   </object>
   <object class="GtkAdjustment" id="_kdg">
     <property name="upper">1</property>
-    <property name="value">0.5</property>
     <property name="step_increment">0.01</property>
     <property name="page_increment">10</property>
   </object>
   <object class="GtkAdjustment" id="_kdr">
     <property name="upper">1</property>
-    <property name="value">0.5</property>
     <property name="step_increment">0.01</property>
     <property name="page_increment">10</property>
   </object>
   <object class="GtkAdjustment" id="_ksb">
     <property name="upper">1</property>
-    <property name="value">0.5</property>
     <property name="step_increment">0.01</property>
     <property name="page_increment">10</property>
   </object>
   <object class="GtkAdjustment" id="_ksg">
     <property name="upper">1</property>
-    <property name="value">0.5</property>
     <property name="step_increment">0.01</property>
     <property name="page_increment">10</property>
   </object>
   <object class="GtkAdjustment" id="_ksr">
     <property name="upper">1</property>
-    <property name="value">0.5</property>
+    <property name="value">1</property>
     <property name="step_increment">0.01</property>
     <property name="page_increment">10</property>
   </object>
   <object class="GtkAdjustment" id="_lx">
     <property name="lower">-100</property>
     <property name="upper">100</property>
+    <property name="value">-8</property>
     <property name="step_increment">1</property>
     <property name="page_increment">10</property>
   </object>
   <object class="GtkAdjustment" id="_ly">
     <property name="lower">-100</property>
     <property name="upper">100</property>
+    <property name="value">-5</property>
     <property name="step_increment">1</property>
     <property name="page_increment">10</property>
   </object>
   <object class="GtkAdjustment" id="_lz">
     <property name="lower">-100</property>
     <property name="upper">100</property>
-    <property name="value">-10</property>
+    <property name="value">-8</property>
     <property name="step_increment">1</property>
     <property name="page_increment">10</property>
   </object>
@@ -251,7 +247,7 @@
   </object>
   <object class="GtkAdjustment" id="_r">
     <property name="upper">1</property>
-    <property name="value">0.10000000000000001</property>
+    <property name="value">1</property>
     <property name="step_increment">0.01</property>
     <property name="page_increment">10</property>
   </object>
@@ -1301,71 +1297,6 @@
                               <object class="GtkLabel">
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
-                                <property name="label" translatable="yes">Red</property>
-                              </object>
-                              <packing>
-                                <property name="expand">True</property>
-                                <property name="fill">True</property>
-                                <property name="position">0</property>
-                              </packing>
-                            </child>
-                            <child>
-                              <object class="GtkSpinButton">
-                                <property name="visible">True</property>
-                                <property name="can_focus">True</property>
-                                <property name="text" translatable="yes">0</property>
-                                <property name="adjustment">_kar</property>
-                                <property name="digits">2</property>
-                              </object>
-                              <packing>
-                                <property name="expand">True</property>
-                                <property name="fill">True</property>
-                                <property name="position">1</property>
-                              </packing>
-                            </child>
-                            <child>
-                              <object class="GtkSpinButton">
-                                <property name="visible">True</property>
-                                <property name="can_focus">True</property>
-                                <property name="text" translatable="yes">0</property>
-                                <property name="adjustment">_kdr</property>
-                                <property name="digits">2</property>
-                              </object>
-                              <packing>
-                                <property name="expand">True</property>
-                                <property name="fill">True</property>
-                                <property name="position">2</property>
-                              </packing>
-                            </child>
-                            <child>
-                              <object class="GtkSpinButton">
-                                <property name="visible">True</property>
-                                <property name="can_focus">True</property>
-                                <property name="text" translatable="yes">0</property>
-                                <property name="adjustment">_ksr</property>
-                                <property name="digits">2</property>
-                              </object>
-                              <packing>
-                                <property name="expand">True</property>
-                                <property name="fill">True</property>
-                                <property name="position">3</property>
-                              </packing>
-                            </child>
-                          </object>
-                          <packing>
-                            <property name="expand">False</property>
-                            <property name="fill">True</property>
-                            <property name="position">26</property>
-                          </packing>
-                        </child>
-                        <child>
-                          <object class="GtkBox">
-                            <property name="visible">True</property>
-                            <property name="can_focus">False</property>
-                            <child>
-                              <object class="GtkLabel">
-                                <property name="visible">True</property>
-                                <property name="can_focus">False</property>
                                 <property name="label" translatable="yes">Green</property>
                               </object>
                               <packing>
@@ -1408,6 +1339,71 @@
                                 <property name="can_focus">True</property>
                                 <property name="text" translatable="yes">0</property>
                                 <property name="adjustment">_ksg</property>
+                                <property name="digits">2</property>
+                              </object>
+                              <packing>
+                                <property name="expand">True</property>
+                                <property name="fill">True</property>
+                                <property name="position">3</property>
+                              </packing>
+                            </child>
+                          </object>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">True</property>
+                            <property name="position">26</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkBox">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <child>
+                              <object class="GtkLabel">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <property name="label" translatable="yes">Red</property>
+                              </object>
+                              <packing>
+                                <property name="expand">True</property>
+                                <property name="fill">True</property>
+                                <property name="position">0</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkSpinButton">
+                                <property name="visible">True</property>
+                                <property name="can_focus">True</property>
+                                <property name="text" translatable="yes">0</property>
+                                <property name="adjustment">_kar</property>
+                                <property name="digits">2</property>
+                              </object>
+                              <packing>
+                                <property name="expand">True</property>
+                                <property name="fill">True</property>
+                                <property name="position">1</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkSpinButton">
+                                <property name="visible">True</property>
+                                <property name="can_focus">True</property>
+                                <property name="text" translatable="yes">0</property>
+                                <property name="adjustment">_kdr</property>
+                                <property name="digits">2</property>
+                              </object>
+                              <packing>
+                                <property name="expand">True</property>
+                                <property name="fill">True</property>
+                                <property name="position">2</property>
+                              </packing>
+                            </child>
+                            <child>
+                              <object class="GtkSpinButton">
+                                <property name="visible">True</property>
+                                <property name="can_focus">True</property>
+                                <property name="text" translatable="yes">0</property>
+                                <property name="adjustment">_ksr</property>
                                 <property name="digits">2</property>
                               </object>
                               <packing>
@@ -1825,7 +1821,7 @@
                               <object class="GtkLabel">
                                 <property name="visible">True</property>
                                 <property name="can_focus">False</property>
-                                <property name="label" translatable="yes">Плотность материала</property>
+                                <property name="label" translatable="yes">Гладкость материала</property>
                               </object>
                               <packing>
                                 <property name="expand">True</property>
@@ -1871,28 +1867,10 @@
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
                             <child>
-                              <object class="GtkLabel">
-                                <property name="visible">True</property>
-                                <property name="can_focus">False</property>
-                                <property name="label" translatable="yes">d составляющая освещения</property>
-                              </object>
-                              <packing>
-                                <property name="expand">True</property>
-                                <property name="fill">True</property>
-                                <property name="position">0</property>
-                              </packing>
+                              <placeholder/>
                             </child>
                             <child>
-                              <object class="GtkLabel">
-                                <property name="visible">True</property>
-                                <property name="can_focus">False</property>
-                                <property name="label" translatable="yes">k составляющая освещения</property>
-                              </object>
-                              <packing>
-                                <property name="expand">True</property>
-                                <property name="fill">True</property>
-                                <property name="position">1</property>
-                              </packing>
+                              <placeholder/>
                             </child>
                           </object>
                           <packing>
@@ -1902,25 +1880,21 @@
                           </packing>
                         </child>
                         <child>
-                          <placeholder/>
+                          <object class="GtkLabel">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="label" translatable="yes">k составляющая освещения</property>
+                          </object>
+                          <packing>
+                            <property name="expand">True</property>
+                            <property name="fill">True</property>
+                            <property name="position">39</property>
+                          </packing>
                         </child>
                         <child>
                           <object class="GtkBox">
                             <property name="visible">True</property>
                             <property name="can_focus">False</property>
-                            <child>
-                              <object class="GtkSpinButton">
-                                <property name="visible">True</property>
-                                <property name="can_focus">True</property>
-                                <property name="adjustment">_d</property>
-                                <property name="digits">2</property>
-                              </object>
-                              <packing>
-                                <property name="expand">True</property>
-                                <property name="fill">True</property>
-                                <property name="position">0</property>
-                              </packing>
-                            </child>
                             <child>
                               <object class="GtkSpinButton">
                                 <property name="visible">True</property>
