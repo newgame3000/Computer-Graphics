@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net5.0</TargetFramework>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+      <DefineConstants>TRACE;LINUX;COREAPP</DefineConstants>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Remove="**\*.glade" />
+        <EmbeddedResource Include="**\*.glade">
+            <LogicalName>%(Filename)%(Extension)</LogicalName>
+        </EmbeddedResource>
+        <None Remove="shader.vert" />
+        <None Remove="VertexShader.glsl" />
+        <EmbeddedResource Include="VertexShader.glsl" />
+        <None Remove="FragmentShader.glsl" />
+        <EmbeddedResource Include="FragmentShader.glsl" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="GtkSharp" Version="3.24.24.*" />
+    </ItemGroup>
+
+
+    <ItemGroup>
+      <ProjectReference Include="..\CGPlatform\CGPlatform.csproj" />
+    </ItemGroup>
+
+</Project>
