@@ -33,6 +33,8 @@ namespace lab4_5
         [UI] private Adjustment _rotationZ = null;
         [UI] private CheckButton _lines = null;
         [UI] private CheckButton _fill = null;
+        [UI] private CheckButton _light = null;
+        [UI] private CheckButton _showLight = null;
 
         [UI] private Adjustment _a = null;
         [UI] private Adjustment _b = null;
@@ -48,41 +50,56 @@ namespace lab4_5
         [UI] private Adjustment _g = null;
         [UI] private Adjustment _bl = null;
         
-        // [UI] private Adjustment _kar = null;
-        // [UI] private Adjustment _kag = null;
-        // [UI] private Adjustment _kab = null;
-        // [UI] private Adjustment _kdr = null;
-        // [UI] private Adjustment _kdg = null;
-        // [UI] private Adjustment _kdb = null;
-        // [UI] private Adjustment _ksr = null;
-        // [UI] private Adjustment _ksg = null;
-        // [UI] private Adjustment _ksb = null;
-        //
-        // [UI] private Adjustment _lx = null;
-        // [UI] private Adjustment _ly = null;
-        // [UI] private Adjustment _lz = null;
-        //
-        // [UI] private Adjustment _iar = null;
-        // [UI] private Adjustment _iag = null;
-        // [UI] private Adjustment _iab = null;
-        // [UI] private Adjustment _ilr = null;
-        // [UI] private Adjustment _ilg = null;
-        // [UI] private Adjustment _ilb = null;
-        //
-        // [UI] private Adjustment _p = null;
-        // [UI] private Adjustment _d = null;
-        // [UI] private Adjustment _k = null;
+        [UI] private Adjustment _kar = null;
+        [UI] private Adjustment _kag = null;
+        [UI] private Adjustment _kab = null;
+        [UI] private Adjustment _kdr = null;
+        [UI] private Adjustment _kdg = null;
+        [UI] private Adjustment _kdb = null;
+        [UI] private Adjustment _ksr = null;
+        [UI] private Adjustment _ksg = null;
+        [UI] private Adjustment _ksb = null;
+        
+        [UI] private Adjustment _lx = null;
+        [UI] private Adjustment _ly = null;
+        [UI] private Adjustment _lz = null;
+        
+        [UI] private Adjustment _iar = null;
+        [UI] private Adjustment _iag = null;
+        [UI] private Adjustment _iab = null;
+        [UI] private Adjustment _ilr = null;
+        [UI] private Adjustment _ilg = null;
+        [UI] private Adjustment _ilb = null;
+        
+        [UI] private Adjustment _p = null;
+        [UI] private Adjustment _k = null;
         
         class Vertex
         {
             public Vector3 Point;
             public Vector3 Color;
             public uint Id = 0;
+            public Vector3 NormalInWorldSpace;
+            
+            public List<Polygon> polygons= new List<Polygon>();
             public Vertex(float x, float y, float z)
             {
                 Point = new Vector3(x, y, z);
             }
         }
+        
+        class Polygon
+        {
+            public List<Vertex> points;
+            public Vector3 Color;
+
+            public Vector3 NormalInWorldSpace;
+            public Polygon()
+            {
+                points = new List<Vertex>();
+            }
+        }
+
 
         class Camera
         {
@@ -98,11 +115,13 @@ namespace lab4_5
             }
         }
 
+        private List<Polygon> Polygons = new List<Polygon>();
         private List<List<Vertex>> Verticies = new List<List<Vertex>>();
         static OpenGL gl = new SharpGL.OpenGL();
         private float[] masver;
         private uint[] masid;
-        private Camera camera = new Camera(new Vector3(0, 0, -1), new Vector3(0, 0, 0), new Vector3(0, 1, 0));
+        private uint VCount = 0;
+        private Camera camera = new Camera(new Vector3(0, 1,-1), new Vector3(0, 0, 0), new Vector3(0, 1, 0));
 
         private bool motion = false;
         private float Oldx = -1;
@@ -127,148 +146,301 @@ namespace lab4_5
                 return reader.ReadToEnd();
             }
         }
-        
+         Vector3 DifferenceVector3(Vector3 a, Vector3 b)
+        {
+            Vector3 ans = new Vector3();
+            ans.X = a.X - b.X;
+            ans.Y = a.Y - b.Y;
+            ans.Z = a.Z - b.Z;
+            return ans;
+        }
+        void Normals(Polygon a)
+        {
+            Vector3 vector1 =  DifferenceVector3(a.points[0].Point,a.points[1].Point) ;
+            Vector3 vector2 =  DifferenceVector3(a.points[2].Point,a.points[1].Point) ;
+            
+
+            Vector3 vector3 = new Vector3(vector1.Y * vector2.Z - vector1.Z * vector2.Y,
+                vector1.Z * vector2.X - vector1.X * vector2.Z, vector1.X * vector2.Y - vector1.Y * vector2.X);
+
+            vector3 = Vector3.Normalize(vector3);
+            
+            a.NormalInWorldSpace = vector3;
+        }
         
         unsafe void Figure()
         {
             List<Vertex> V = new List<Vertex>();
-                Verticies = new List<List<Vertex>>();
+            Verticies = new List<List<Vertex>>();
+            Verticies.Add(new List<Vertex>());
+            Verticies[Verticies.Count - 1].Add(new Vertex(0, 0, (int) _c.Value));
+            Verticies[Verticies.Count - 1].Add(new Vertex(0, 0, -(int) _c.Value));
+            V.Add(new Vertex(0, 0, (int) _c.Value));
+            V.Add(new Vertex(0, 0, -(int) _c.Value));
+                
+            double phi = 2 * Math.PI / _phi.Value;
+            double theta = 2 * Math.PI / _theta.Value;
+
+            double sumphi = 0;
+            double sumtheta = 0;
+
+            for (int i = 0; i < (int) _phi.Value; ++i)
+            {
+                sumphi += phi;
                 Verticies.Add(new List<Vertex>());
-                Verticies[Verticies.Count - 1].Add(new Vertex(0, 0, (int) _c.Value));
-                Verticies[Verticies.Count - 1].Add(new Vertex(0, 0, -(int) _c.Value));
-                V.Add(new Vertex(0, 0, (int) _c.Value));
-                V.Add(new Vertex(0, 0, -(int) _c.Value));
-                
-                double phi = 2 * Math.PI / _phi.Value;
-                double theta = 2 * Math.PI / _theta.Value;
-
-                double sumphi = 0;
-                double sumtheta = 0;
-
-                for (int i = 0; i < (int) _phi.Value; ++i)
+                for (int j = 1; j < (int) _theta.Value / 2; ++j)
                 {
-                    sumphi += phi;
-                    Verticies.Add(new List<Vertex>());
-                    for (int j = 1; j < (int) _theta.Value / 2; ++j)
-                    {
-                        sumtheta += theta;
-                        Vertex A = new((float) ((int) _a.Value * Math.Sin(sumtheta) * Math.Cos(sumphi)) ,
-                            (float) ((int) _b.Value * Math.Sin(sumtheta) * Math.Sin(sumphi)),
-                            (float) ((int) _c.Value * Math.Cos(sumtheta)));
-                        Verticies[Verticies.Count - 1].Add(A);
-                        V.Add(A);
-                    }
-                    sumtheta = 0;
+                    sumtheta += theta;
+                    Vertex A = new((float) ((int) _a.Value * Math.Sin(sumtheta) * Math.Cos(sumphi)) ,
+                        (float) ((int) _b.Value * Math.Sin(sumtheta) * Math.Sin(sumphi)),
+                        (float) ((int) _c.Value * Math.Cos(sumtheta)));
+                    Verticies[Verticies.Count - 1].Add(A);
+                    V.Add(A);
                 }
+                sumtheta = 0;
+            }
 
-                uint p = 0;
-                for (int i = 0; i < Verticies.Count; ++i)
+            uint p = 0;
+            for (int i = 0; i < Verticies.Count; ++i)
+            {
+                for (int j = 0; j < Verticies[i].Count; ++j)
                 {
-                    for (int j = 0; j < Verticies[i].Count; ++j)
-                    {
-                        Verticies[i][j].Id = p;
-                        p += 1;
-                    }
+                    Verticies[i][j].Id = p;
+                    p += 1;
                 }
-                
-                masver = new float[V.Count * 3];
+            }
 
-                int size = (Verticies.Count - 2) * 3 + 3 + (V.Count - Verticies[0].Count - Verticies[Verticies.Count - 1].Count - Verticies.Count + 2) * 6 + (Verticies[Verticies.Count - 1].Count - 1) * 6 +
+            VCount = (uint)V.Count;
+
+            int size = (Verticies.Count - 2) * 3 + 3 + (V.Count - Verticies[0].Count - Verticies[Verticies.Count - 1].Count - Verticies.Count + 2) * 6 + (Verticies[Verticies.Count - 1].Count - 1) * 6 +
                            (Verticies.Count - 2) * 3 + 3;
                 
-                masid = new uint[size];
+            masid = new uint[size];
                
-                int k = 0;
+            masver = new float[V.Count * 6];
+                
+            Polygons = new List<Polygon>();
+                
+            //Крышка
+            for (int i = 1; i < Verticies.Count - 1; ++i)
+            {
+                Polygons.Add(new Polygon());
+                Polygons[Polygons.Count - 1].points.Add(Verticies[0][0]);
+                Polygons[Polygons.Count - 1].points.Add(Verticies[i + 1][0]);
+                Polygons[Polygons.Count - 1].points.Add(Verticies[i][0]);
 
-                 foreach (Vertex vert in V)
-                 {
-                     masver[k] = vert.Point.X;
-                     k += 1;
-                     masver[k] = vert.Point.Y;
-                     k += 1;
-                     masver[k] = vert.Point.Z;
-                     k += 1;
-                 }
+                Verticies[0][0].polygons.Add(Polygons[Polygons.Count - 1]);
+                Verticies[i + 1][0].polygons.Add(Polygons[Polygons.Count - 1]);
+                Verticies[i][0].polygons.Add(Polygons[Polygons.Count - 1]);
+            }
                 
+            Polygons.Add(new Polygon());
+            Polygons[Polygons.Count - 1].points.Add(Verticies[0][0]);
+            Polygons[Polygons.Count - 1].points.Add(Verticies[1][0]);
+            Polygons[Polygons.Count - 1].points.Add(Verticies[Verticies.Count - 1][0]);
                 
-                 k = 0;
-                 //Крышка
-                 for (int i = 1; i < Verticies.Count - 1; ++i)
-                 {
-                     masid[k] = Verticies[0][0].Id;
-                     k += 1;
-                     masid[k] = Verticies[i + 1][0].Id;
-                     k += 1;
-                     masid[k] = Verticies[i][0].Id;
-                     k += 1;
-                 }
+            Verticies[0][0].polygons.Add(Polygons[Polygons.Count - 1]);
+            Verticies[1][0].polygons.Add(Polygons[Polygons.Count - 1]);
+            Verticies[Verticies.Count - 1][0].polygons.Add(Polygons[Polygons.Count - 1]);
+                    
+            //Середина
+            for (int i = 1; i < Verticies.Count - 1; ++i)
+            {
+                for (int j = 0; j < Verticies[i].Count - 1; ++j)
+                {
+                    Polygons.Add(new Polygon());
+                    Polygons[Polygons.Count - 1].points.Add(Verticies[i][j + 1]);
+                    Polygons[Polygons.Count - 1].points.Add(Verticies[i][j]);
+                    Polygons[Polygons.Count - 1].points.Add(Verticies[i + 1][j + 1]);
+                        
+                    Verticies[i][j + 1].polygons.Add(Polygons[Polygons.Count - 1]);
+                    Verticies[i][j].polygons.Add(Polygons[Polygons.Count - 1]);
+                    Verticies[i + 1][j + 1].polygons.Add(Polygons[Polygons.Count - 1]);
+                        
+                    Polygons.Add(new Polygon());
+                    Polygons[Polygons.Count - 1].points.Add(Verticies[i + 1][j + 1]);
+                    Polygons[Polygons.Count - 1].points.Add(Verticies[i][j]);
+                    Polygons[Polygons.Count - 1].points.Add(Verticies[i + 1][j]);
+                        
+                    Verticies[i + 1][j + 1].polygons.Add(Polygons[Polygons.Count - 1]);
+                    Verticies[i][j].polygons.Add(Polygons[Polygons.Count - 1]);
+                    Verticies[i + 1][j].polygons.Add(Polygons[Polygons.Count - 1]);
+                }
+            }
+            
+            for (int j = 0; j < Verticies[Verticies.Count - 1].Count - 1; ++j)
+            {
+                Polygons.Add(new Polygon());
+                Polygons[Polygons.Count - 1].points.Add(Verticies[Verticies.Count - 1][j]);
+                Polygons[Polygons.Count - 1].points.Add(Verticies[1][j + 1]);
+                Polygons[Polygons.Count - 1].points.Add(Verticies[Verticies.Count - 1][j + 1]);
                 
-                 masid[k] = Verticies[0][0].Id;
-                 k += 1;
-                 masid[k] = Verticies[1][0].Id;
-                 k += 1;
-                 masid[k] = Verticies[Verticies.Count - 1][0].Id;
-                 k += 1;
+                Verticies[Verticies.Count - 1][j].polygons.Add(Polygons[Polygons.Count - 1]);
+                Verticies[1][j + 1].polygons.Add(Polygons[Polygons.Count - 1]);
+                Verticies[Verticies.Count - 1][j + 1].polygons.Add(Polygons[Polygons.Count - 1]);
+                
+                Polygons.Add(new Polygon());
+                Polygons[Polygons.Count - 1].points.Add(Verticies[1][j + 1]);
+                Polygons[Polygons.Count - 1].points.Add(Verticies[Verticies.Count - 1][j]);
+                Polygons[Polygons.Count - 1].points.Add(Verticies[1][j]);
+                
+                Verticies[1][j + 1].polygons.Add(Polygons[Polygons.Count - 1]);
+                Verticies[Verticies.Count - 1][j].polygons.Add(Polygons[Polygons.Count - 1]);
+                Verticies[1][j].polygons.Add(Polygons[Polygons.Count - 1]);
+            }
 
-                 int t = 0;
+            //Нижняя крышка
+            for (int i = 1; i < Verticies.Count - 1; ++i)
+            {
+                Polygons.Add(new Polygon());
+                Polygons[Polygons.Count - 1].points.Add(Verticies[0][1]);
+                Polygons[Polygons.Count - 1].points.Add(Verticies[i][Verticies[i].Count - 1]);
+                Polygons[Polygons.Count - 1].points.Add(Verticies[i + 1][Verticies[i + 1].Count - 1]);
+                
+                Verticies[0][1].polygons.Add(Polygons[Polygons.Count - 1]);
+                Verticies[i][Verticies[i].Count - 1].polygons.Add(Polygons[Polygons.Count - 1]);
+                Verticies[i + 1][Verticies[i + 1].Count - 1].polygons.Add(Polygons[Polygons.Count - 1]);
+            }
+            
+            Polygons.Add(new Polygon());
+            Polygons[Polygons.Count - 1].points.Add(Verticies[0][1]);
+            Polygons[Polygons.Count - 1].points.Add(Verticies[Verticies.Count - 1][Verticies[Verticies.Count - 1].Count - 1]);
+            Polygons[Polygons.Count - 1].points.Add(Verticies[1][Verticies[1].Count - 1]);
+            
+            Verticies[0][1].polygons.Add(Polygons[Polygons.Count - 1]);
+            Verticies[Verticies.Count - 1][Verticies[Verticies.Count - 1].Count - 1].polygons.Add(Polygons[Polygons.Count - 1]);
+            Verticies[1][Verticies[1].Count - 1].polygons.Add(Polygons[Polygons.Count - 1]);
+
+            foreach (var pol in Polygons)
+            { 
+                Normals(pol);
+            }
+                
+            for (int i = 0; i < Verticies.Count; ++i)
+            {
+                for (int j = 0; j < Verticies[i].Count; ++j)
+                {
+                    Vector3 n = new Vector3(0, 0, 0);
+                    for (int l = 0; l < Verticies[i][j].polygons.Count; ++l)
+                    {
+                        n += Verticies[i][j].polygons[l].NormalInWorldSpace;
+                    }
+
+                    n.X = n.X / Verticies[i][j].polygons.Count;
+                    n.Y = n.Y / Verticies[i][j].polygons.Count;
+                    n.Z = n.Z / Verticies[i][j].polygons.Count;
+                    n = Vector3.Normalize(n);
+                    Verticies[i][j].NormalInWorldSpace = n;
+                }
+            }
+                
+            int k = 0;
+
+            foreach (Vertex vert in V)
+            {
+                masver[k] = vert.Point.X;
+                k += 1;
+                masver[k] = vert.Point.Y;
+                k += 1;
+                masver[k] = vert.Point.Z;
+                k += 1;
+            }
+
+            int k2 = k;
+                
+            k = 0;
+            //Крышка
+            for (int i = 1; i < Verticies.Count - 1; ++i)
+            {
+                masid[k] = Verticies[0][0].Id;
+                k += 1;
+                masid[k] = Verticies[i + 1][0].Id;
+                k += 1;
+                masid[k] = Verticies[i][0].Id;
+                k += 1;
+            }
+                
+            masid[k] = Verticies[0][0].Id;
+            k += 1;
+            masid[k] = Verticies[1][0].Id;
+            k += 1;
+            masid[k] = Verticies[Verticies.Count - 1][0].Id;
+            k += 1;
+
+            int t = 0;
                  
-                  //Середина
-                  for (int i = 1; i < Verticies.Count - 1; ++i)
-                  {
-                      for (int j = 0; j < Verticies[i].Count - 1; ++j)
-                      {
-                          t += 1;
-                          masid[k] = Verticies[i][j + 1].Id;
-                          k += 1;
-                          masid[k] = Verticies[i][j].Id;
-                          k += 1;
-                          masid[k] = Verticies[i + 1][j + 1].Id;
-                          k += 1;
+            //Середина
+            for (int i = 1; i < Verticies.Count - 1; ++i)
+            {
+                for (int j = 0; j < Verticies[i].Count - 1; ++j)
+                {
+                    t += 1;
+                    masid[k] = Verticies[i][j + 1].Id;
+                    k += 1;
+                    masid[k] = Verticies[i][j].Id;
+                    k += 1;
+                    masid[k] = Verticies[i + 1][j + 1].Id;
+                    k += 1;
                  
-                          masid[k] = Verticies[i + 1][j + 1].Id;
-                          k += 1;
-                          masid[k] = Verticies[i][j].Id;
-                          k += 1;
-                          masid[k] = Verticies[i + 1][j].Id;
-                          k += 1;
-                      }
-                  }
+                    masid[k] = Verticies[i + 1][j + 1].Id;
+                    k += 1;
+                    masid[k] = Verticies[i][j].Id;
+                    k += 1; 
+                    masid[k] = Verticies[i + 1][j].Id; 
+                    k += 1;
+                }
+            }
                  
-                  for (int j = 0; j < Verticies[Verticies.Count - 1].Count - 1; ++j)
-                  {
-                      masid[k] = Verticies[Verticies.Count - 1][j].Id;
-                      k += 1;
-                      masid[k] = Verticies[1][j + 1].Id;
-                      k += 1;
-                      masid[k] = Verticies[Verticies.Count - 1][j + 1].Id;
-                      k += 1;
+            for (int j = 0; j < Verticies[Verticies.Count - 1].Count - 1; ++j)
+            {
+                masid[k] = Verticies[Verticies.Count - 1][j].Id;
+                k += 1;
+                masid[k] = Verticies[1][j + 1].Id;
+                k += 1;
+                masid[k] = Verticies[Verticies.Count - 1][j + 1].Id;
+                k += 1;
                  
-                      masid[k] = Verticies[1][j + 1].Id;
-                      k += 1;
-                      masid[k] = Verticies[Verticies.Count - 1][j].Id;
-                      k += 1;
-                      masid[k] = Verticies[1][j].Id;
-                      k += 1;
-                  }
-                  //Нижняя крышка
-                  for (int i = 1; i < Verticies.Count - 1; ++i)
-                  {
-                          masid[k] = Verticies[0][1].Id;
-                          k += 1;
-                          masid[k] = Verticies[i][Verticies[i].Count - 1].Id;
-                          k += 1;
-                          masid[k] = Verticies[i + 1][Verticies[i + 1].Count - 1].Id;
-                          k += 1;
-                  }
+                masid[k] = Verticies[1][j + 1].Id;
+                k += 1;
+                masid[k] = Verticies[Verticies.Count - 1][j].Id;
+                k += 1;
+                masid[k] = Verticies[1][j].Id;
+                k += 1;
+            }
+            //Нижняя крышка
+            for (int i = 1; i < Verticies.Count - 1; ++i)
+            { 
+                masid[k] = Verticies[0][1].Id;
+                k += 1;
+                masid[k] = Verticies[i][Verticies[i].Count - 1].Id;
+                k += 1;
+                masid[k] = Verticies[i + 1][Verticies[i + 1].Count - 1].Id;
+                k += 1;
+            }
                  
-                  masid[k] = Verticies[0][1].Id;
-                  k += 1;
-                  masid[k] = Verticies[Verticies.Count - 1][Verticies[Verticies.Count - 1].Count - 1].Id;
-                  k += 1;
-                  masid[k] = Verticies[1][Verticies[1].Count - 1].Id;
+            masid[k] = Verticies[0][1].Id;
+            k += 1;
+            masid[k] = Verticies[Verticies.Count - 1][Verticies[Verticies.Count - 1].Count - 1].Id;
+            k += 1;
+            masid[k] = Verticies[1][Verticies[1].Count - 1].Id;
+                  
+                  
+            for (int i = 0; i < Verticies.Count; ++i)
+            {
+                for (int j = 0; j < Verticies[i].Count; ++j)
+                {
+                    masver[k2] = (float)Verticies[i][j].NormalInWorldSpace.X;
+                    k2 += 1;
+                    masver[k2] = (float)Verticies[i][j].NormalInWorldSpace.Y;
+                    k2 += 1;
+                    masver[k2] = (float)Verticies[i][j].NormalInWorldSpace.Z;
+                    k2 += 1;
+                }
+            }
+            // Console.WriteLine(k2);
         }
-        
-        
+
+
         private unsafe MainWindow(Builder builder) : base(builder.GetRawOwnedObject("MainWindow"))
         {
             builder.Autoconnect(this);
@@ -292,7 +464,8 @@ namespace lab4_5
 
             _lines.Toggled += ValueChanged;
             _fill.Toggled += ValueChanged;
-
+            _light.Toggled += ValueChanged;
+            
             _drawingArea.MotionNotifyEvent += DrawingAreaOnMotionNotifyEvent;
             _drawingArea.ButtonReleaseEvent += DrawingAreaOnButtonReleaseEvent;
             _drawingArea.ButtonPressEvent += DrawingAreaOnButtonPressEvent;
@@ -310,30 +483,30 @@ namespace lab4_5
             _cposY.ValueChanged += CposYValueChanged;
             _cposZ.ValueChanged += CposZValueChanged;
             
-            // _kag.ValueChanged += ValueChanged2;
-            // _kar.ValueChanged += ValueChanged2;
-            // _kab.ValueChanged += ValueChanged2;
-            // _kdr.ValueChanged += ValueChanged2;
-            // _kdg.ValueChanged += ValueChanged2;
-            // _kdb.ValueChanged += ValueChanged2;
-            // _ksr.ValueChanged += ValueChanged2;
-            // _ksg.ValueChanged += ValueChanged2;
-            // _ksb.ValueChanged += ValueChanged2;
-            //
-            // _iab.ValueChanged += ValueChanged2;
-            // _iag.ValueChanged += ValueChanged2;
-            // _iar.ValueChanged += ValueChanged2;
-            // _ilb.ValueChanged += ValueChanged2;
-            // _ilg.ValueChanged += ValueChanged2;
-            // _ilr.ValueChanged += ValueChanged2;
-            //
-            // _lx.ValueChanged += ValueChanged2;
-            // _ly.ValueChanged += ValueChanged2;
-            // _lz.ValueChanged += ValueChanged2;
-            //
-            // _p.ValueChanged += ValueChanged2;
-            // _d.ValueChanged += ValueChanged2;
-            // _k.ValueChanged += ValueChanged2;
+            _kag.ValueChanged += ValueChanged;
+            _kar.ValueChanged += ValueChanged;
+            _kab.ValueChanged += ValueChanged;
+            _kdr.ValueChanged += ValueChanged;
+            _kdg.ValueChanged += ValueChanged;
+            _kdb.ValueChanged += ValueChanged;
+            _ksr.ValueChanged += ValueChanged;
+            _ksg.ValueChanged += ValueChanged;
+            _ksb.ValueChanged += ValueChanged;
+            
+            _iab.ValueChanged += ValueChanged;
+            _iag.ValueChanged += ValueChanged;
+            _iar.ValueChanged += ValueChanged;
+            _ilb.ValueChanged += ValueChanged;
+            _ilg.ValueChanged += ValueChanged;
+            _ilr.ValueChanged += ValueChanged;
+            
+            _lx.ValueChanged += ValueChanged;
+            _ly.ValueChanged += ValueChanged;
+            _lz.ValueChanged += ValueChanged;
+
+            _p.ValueChanged += ValueChanged;
+            _k.ValueChanged += ValueChanged;
+            _showLight.Toggled += ValueChanged;
 
             _drawingArea.ScrollEvent += (o, args) =>
            {
@@ -401,6 +574,19 @@ namespace lab4_5
             gl.GetShader(fragmentShader, OpenGL.GL_COMPILE_STATUS, glsl_tmp);
             Debug.Assert(glsl_tmp[0] == OpenGL.GL_TRUE, "Shader compilation failed");
                  
+            
+            uint fragmentLight;
+            fragmentLight = gl.CreateShader(OpenGL.GL_FRAGMENT_SHADER);
+            s = ReadFromRes("lab4-5.FragmentLight.glsl");
+            gl.ShaderSource(fragmentLight, s);
+            gl.CompileShader(fragmentLight);
+                
+            txt = new System.Text.StringBuilder(512);
+            gl.GetShaderInfoLog(fragmentLight, 512, (IntPtr)0, txt);
+            Console.WriteLine(txt);
+            gl.GetShader(fragmentLight, OpenGL.GL_COMPILE_STATUS, glsl_tmp);
+            Debug.Assert(glsl_tmp[0] == OpenGL.GL_TRUE, "Shader compilation failed");
+            
             uint shaderProgram;
             shaderProgram = gl.CreateProgram();
             gl.AttachShader(shaderProgram, vertexShader);
@@ -410,34 +596,52 @@ namespace lab4_5
             gl.GetProgram(shaderProgram, OpenGL.GL_LINK_STATUS, glsl_tmp);
             Debug.Assert(glsl_tmp[0] == OpenGL.GL_TRUE, "Shader program link failed");
 
+            uint lightProgram;
+            lightProgram = gl.CreateProgram();
+            gl.AttachShader(lightProgram, vertexShader);
+            gl.AttachShader(lightProgram, fragmentLight);
+            gl.LinkProgram(lightProgram);
+
+            gl.GetProgram(lightProgram, OpenGL.GL_LINK_STATUS, glsl_tmp);
+            Debug.Assert(glsl_tmp[0] == OpenGL.GL_TRUE, "Shader program link failed");
+            
             Figure();
 
-            uint[] VAO = new uint[1];
-            uint[] VBO = new uint[2];
+            uint[] VAO = new uint[2];
+            uint[] VBO = new uint[3];
+            gl.GenVertexArrays(2, VAO);
+            gl.GenBuffers(3, VBO);
             _drawingArea.Render += (o, args) =>
             {
-                VAO = new uint[1];
-                
-                gl.GenVertexArrays(1, VAO);
-                    
-                VBO = new uint[2];
-                gl.GenBuffers(2, VBO); 
-                    
                 gl.BindVertexArray(VAO[0]);
-                    
                 gl.BindBuffer(OpenGL.GL_ARRAY_BUFFER, VBO[0]);
                 gl.BindBuffer(OpenGL.GL_ELEMENT_ARRAY_BUFFER, VBO[1]);
                     
                 gl.BufferData(OpenGL.GL_ARRAY_BUFFER, masver, OpenGL.GL_DYNAMIC_DRAW);
                 gl.BufferData(OpenGL.GL_ELEMENT_ARRAY_BUFFER, masid, OpenGL.GL_DYNAMIC_DRAW);
-                    
-                gl.EnableVertexAttribArray(0);
+
                 gl.VertexAttribPointer(0, 3, OpenGL.GL_FLOAT, false,0, (IntPtr)0);
+                gl.VertexAttribPointer(1, 3, OpenGL.GL_FLOAT, false,0, (IntPtr)(sizeof(float) * VCount * 3));
+                Console.WriteLine(VCount * 3);
+                
+                gl.EnableVertexAttribArray(0);
+                gl.EnableVertexAttribArray(1);
+                
                 gl.BindBuffer(OpenGL.GL_ARRAY_BUFFER, 0); 
                 gl.BindVertexArray(0);
                 
+                gl.BindVertexArray(VAO[1]);
+                gl.BindBuffer(OpenGL.GL_ARRAY_BUFFER, VBO[2]);
+                float[] l = new float[3];
+                l[0] = (float) _lx.Value;
+                l[1] = (float) _ly.Value;
+                l[2] = (float) _lz.Value;
+                gl.BufferData(OpenGL.GL_ARRAY_BUFFER, l, OpenGL.GL_DYNAMIC_DRAW);
+                gl.VertexAttribPointer(0, 3, OpenGL.GL_FLOAT, false, 0, IntPtr.Zero);
+                gl.EnableVertexAttribArray(0);
+                gl.BindVertexArray(0);
                 
-                gl.FrontFace(OpenGL.GL_CCW);
+                gl.FrontFace(OpenGL.GL_CW);
 
                 gl.Enable(OpenGL.GL_DEPTH_TEST);
                 gl.DepthFunc(OpenGL.GL_LESS);
@@ -453,12 +657,17 @@ namespace lab4_5
                 gl.ClearColor(0.8f, 0.8f, 0.8f, 1);
                 
                 gl.Clear(OpenGL.GL_COLOR_BUFFER_BIT | OpenGL.GL_DEPTH_BUFFER_BIT);
-                gl.UseProgram(shaderProgram);
-                 
+
                 var proj = Matrix4f.Identity;
                 proj[1,1] = (float)Math.Min(height / width, 1);
                 proj[2,2] = (float)Math.Min(width / height, 1);
+                
+                gl.UseProgram(shaderProgram);
                 int loc = gl.GetUniformLocation(shaderProgram, "proj4f");
+                gl.UniformMatrix4(loc, 1, false, proj.ToArray());
+                
+                gl.UseProgram(lightProgram);
+                loc = gl.GetUniformLocation(lightProgram, "proj4f");
                 gl.UniformMatrix4(loc, 1, false, proj.ToArray());
                 
                 var model = Matrix4f.Identity;
@@ -497,7 +706,13 @@ namespace lab4_5
                 model[4, 1] = -(float)_shiftX.Value;
                 model[4, 2] = (float)_shiftY.Value;
                 model[4, 3] = (float) _shiftZ.Value;
+                
+                gl.UseProgram(shaderProgram);
                 loc = gl.GetUniformLocation(shaderProgram, "model4f");
+                gl.UniformMatrix4(loc, 1, false, model.ToArray());
+                
+                gl.UseProgram(lightProgram);
+                loc = gl.GetUniformLocation(lightProgram, "model4f");
                 gl.UniformMatrix4(loc, 1, false, model.ToArray());
                 
                 var view = Matrix4f.Identity;
@@ -517,34 +732,109 @@ namespace lab4_5
                 view[3, 1] = cameraDirection.X;
                 view[3, 2] = cameraDirection.Y;
                 view[3, 3] = cameraDirection.Z;
+                view[4, 4] = 1;
                 
-                view[4, 1] = camera.Position.X;
-                view[4, 2] = camera.Position.Y;
-                view[4, 3] = camera.Position.Z;
+                var view2 = Matrix4f.Identity;
+                view2[4, 1] = -camera.Position.X;
+                view2[4, 2] = -camera.Position.Y;
+                view2[4, 3] = -camera.Position.Z;
+
+                view = view * view2;
                 
+                gl.UseProgram(shaderProgram);
                 loc = gl.GetUniformLocation(shaderProgram, "view4f");
                 gl.UniformMatrix4(loc, 1, true, view.ToArray());
+                
+                gl.UseProgram(lightProgram);
+                loc = gl.GetUniformLocation(lightProgram, "view4f");
+                gl.UniformMatrix4(loc, 1, true, view.ToArray());
+
+                loc = gl.GetUniformLocation(lightProgram, "m.ka");
+                gl.Uniform3(loc, (float) _kar.Value, (float) _kag.Value, (float) _kab.Value);
+                loc = gl.GetUniformLocation(lightProgram, "m.kd");
+                gl.Uniform3(loc, (float) _kdr.Value, (float) _kdg.Value, (float) _kdb.Value);
+                loc = gl.GetUniformLocation(lightProgram, "m.ks");
+                gl.Uniform3(loc, (float) _ksr.Value, (float) _ksg.Value, (float) _ksb.Value);
+                loc = gl.GetUniformLocation(lightProgram, "m.p");
+                gl.Uniform1(loc, (float)_p.Value);
+                
+                loc = gl.GetUniformLocation(lightProgram, "l.ia");
+                gl.Uniform3(loc, (float) _iar.Value, (float) _iag.Value, (float) _iab.Value);
+                loc = gl.GetUniformLocation(lightProgram, "l.il");
+                gl.Uniform3(loc, (float) _ilr.Value, (float) _ilg.Value, (float) _ilb.Value);
+                loc = gl.GetUniformLocation(lightProgram, "l.position");
+                gl.Uniform3(loc, (float) _lx.Value, (float) _ly.Value, (float) _lz.Value);
+
+                loc = gl.GetUniformLocation(lightProgram, "c");
+                gl.Uniform3(loc, (float)_r.Value, (float)_g.Value, (float)_bl.Value);
+                
+                loc = gl.GetUniformLocation(lightProgram, "k");
+                gl.Uniform1(loc, (float) _k.Value);
+                
+                gl.UseProgram(shaderProgram);
                 loc = gl.GetUniformLocation(shaderProgram, "c");
+                gl.Uniform4(loc, (float)_r.Value, (float) _g.Value, (float) _bl.Value, 1);
                 
                 gl.BindVertexArray(VAO[0]);
 
                 if (_fill.Active)
                 {
-                    gl.CullFace(OpenGL.GL_BACK);
-                    gl.Uniform4(loc, (float) _r.Value, (float) _g.Value, (float) _bl.Value, 1);
-                    gl.PolygonMode(OpenGL.GL_FRONT_AND_BACK, OpenGL.GL_FILL);
-                    gl.DrawElements(OpenGL.GL_TRIANGLES, masid.Length, OpenGL.GL_UNSIGNED_INT, (IntPtr) 0);
-                }
+                    if (!_light.Active)
+                    {
+                        gl.UseProgram(shaderProgram);
+                        gl.CullFace(OpenGL.GL_BACK);
+                        gl.PolygonMode(OpenGL.GL_FRONT_AND_BACK, OpenGL.GL_FILL);
+                        gl.DrawElements(OpenGL.GL_TRIANGLES, masid.Length, OpenGL.GL_UNSIGNED_INT, (IntPtr) 0);
+                        if (_lines.Active)
+                        {
+                            loc = gl.GetUniformLocation(shaderProgram, "c");
+                            gl.Uniform4(loc, 1f, 1f, 1f, 1);
+                            gl.LineWidth(4);
+                            gl.PolygonMode(OpenGL.GL_FRONT_AND_BACK, OpenGL.GL_LINE);
+                            gl.CullFace(OpenGL.GL_BACK);
+                            gl.DrawElements(OpenGL.GL_TRIANGLES, masid.Length, OpenGL.GL_UNSIGNED_INT, (IntPtr)0);
+                        }
+                    }
+                    else
+                    {
+                        
+                        if (_showLight.Active)
+                        {
+                             gl.BindVertexArray(VAO[1]);
+                             gl.UseProgram(shaderProgram);
+                             loc = gl.GetUniformLocation(shaderProgram, "model4f");
+                             gl.UniformMatrix4(loc, 1, false, Matrix4f.Identity.ToArray());
+                             loc = gl.GetUniformLocation(lightProgram, "c");
+                             gl.Uniform4(loc, 1f, 0f, 0f, 1);
+                             gl.PointSize(20);
+                             gl.DrawArrays(OpenGL.GL_POINTS, 0, 1);
+                             gl.BindVertexArray(0);
+                             gl.BindVertexArray(VAO[0]);
+                        }
+                        
+                        
+                        gl.UseProgram(lightProgram);
+                        loc = gl.GetUniformLocation(lightProgram, "c");
+                        gl.Uniform3(loc, (float)_r.Value, (float)_g.Value, (float)_bl.Value);
+                        gl.CullFace(OpenGL.GL_BACK);
+                        gl.PolygonMode(OpenGL.GL_FRONT_AND_BACK, OpenGL.GL_FILL);
+                        gl.DrawElements(OpenGL.GL_TRIANGLES, masid.Length, OpenGL.GL_UNSIGNED_INT, (IntPtr) 0);
 
-                if (_lines.Active)
-                {
-                    gl.Uniform4(loc, 1f, 1f, 1f, 1);
-                    gl.LineWidth(2);
-                    gl.PolygonMode(OpenGL.GL_FRONT_AND_BACK, OpenGL.GL_LINE);
-                    gl.CullFace(OpenGL.GL_BACK);
-                    gl.DrawElements(OpenGL.GL_TRIANGLES, masid.Length, OpenGL.GL_UNSIGNED_INT, (IntPtr)0);
+                        if (_lines.Active)
+                        {
+                            gl.BindVertexArray(VAO[0]);
+                            gl.UseProgram(lightProgram);
+                            // loc = gl.GetUniformLocation(lightProgram, "model4f");
+                            // gl.UniformMatrix4(loc, 1, false, model.ToArray());
+                            loc = gl.GetUniformLocation(lightProgram, "c");
+                            gl.Uniform3(loc, 1f, 1f, 1f);
+                            gl.LineWidth(2);
+                            gl.PolygonMode(OpenGL.GL_FRONT_AND_BACK, OpenGL.GL_LINE);
+                            gl.CullFace(OpenGL.GL_BACK);
+                            gl.DrawElements(OpenGL.GL_TRIANGLES, masid.Length, OpenGL.GL_UNSIGNED_INT, (IntPtr)0);
+                        }
+                    }
                 }
-                
                 gl.BindVertexArray(0);
             };
              

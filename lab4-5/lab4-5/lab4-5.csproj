@@ -20,6 +20,8 @@
         <EmbeddedResource Include="VertexShader.glsl" />
         <None Remove="FragmentShader.glsl" />
         <EmbeddedResource Include="FragmentShader.glsl" />
+        <None Remove="FragmentLight.glsl" />
+        <EmbeddedResource Include="FragmentLight.glsl" />
     </ItemGroup>
 
     <ItemGroup>
