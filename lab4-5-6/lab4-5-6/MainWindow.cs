@@ -4,6 +4,7 @@ using UI = Gtk.Builder.ObjectAttribute;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Collections.Specialized;
+using System.ComponentModel.Design;
 using System.Numerics;
 using Cairo;
 using Gdk;
@@ -17,7 +18,7 @@ using System.Linq;
 using System.Reflection;
 using CGPlatform;
 
-namespace lab4_5
+namespace lab4_5_6
 {
     class MainWindow : Window
     {
@@ -35,6 +36,7 @@ namespace lab4_5
         [UI] private CheckButton _fill = null;
         [UI] private CheckButton _light = null;
         [UI] private CheckButton _showLight = null;
+        [UI] private CheckButton _animation = null;
 
         [UI] private Adjustment _a = null;
         [UI] private Adjustment _b = null;
@@ -130,6 +132,7 @@ namespace lab4_5
         private float dY = 0;
         private double width = 0;
         private double height = 0;
+        private float startTime;
         
         public MainWindow() : this(new Builder("MainWindow.glade"))
         {
@@ -139,9 +142,11 @@ namespace lab4_5
         {
             var assembly = Assembly.GetExecutingAssembly();
             string resourcePath = name;
+            var c = assembly.GetManifestResourceNames();
 
             using (Stream stream = assembly.GetManifestResourceStream(resourcePath))
-            using (StreamReader reader = new StreamReader(stream))
+
+            using (StreamReader reader = new StreamReader(stream)) 
             {
                 return reader.ReadToEnd();
             }
@@ -437,7 +442,6 @@ namespace lab4_5
                     k2 += 1;
                 }
             }
-            // Console.WriteLine(k2);
         }
 
 
@@ -507,6 +511,7 @@ namespace lab4_5
             _p.ValueChanged += ValueChanged;
             _k.ValueChanged += ValueChanged;
             _showLight.Toggled += ValueChanged;
+            _animation.Toggled += ValueChanged;
 
             _drawingArea.ScrollEvent += (o, args) =>
            {
@@ -547,10 +552,15 @@ namespace lab4_5
         private void DrawingAreaOnRealized(object? sender, EventArgs e)
         {
             _drawingArea.MakeCurrent();
+            
+            var frame_clock = _drawingArea.Context.Window.FrameClock;
+            frame_clock.Update += (_, _) => _drawingArea.QueueRender();
+            frame_clock.BeginUpdating();
+            
              uint vertexShader;
 
-            vertexShader = gl.CreateShader(OpenGL.GL_VERTEX_SHADER);
-            string s = ReadFromRes("lab4-5.VertexShader.glsl");
+             vertexShader = gl.CreateShader(OpenGL.GL_VERTEX_SHADER);
+            string s = ReadFromRes("lab4-5-6.VertexShader.glsl");
             gl.ShaderSource(vertexShader, s);
             gl.CompileShader(vertexShader);
                 
@@ -564,7 +574,7 @@ namespace lab4_5
                 
             uint fragmentShader;
             fragmentShader = gl.CreateShader(OpenGL.GL_FRAGMENT_SHADER);
-            s = ReadFromRes("lab4-5.FragmentShader.glsl");
+            s = ReadFromRes("lab4-5-6.FragmentShader.glsl");
             gl.ShaderSource(fragmentShader, s);
             gl.CompileShader(fragmentShader);
                 
@@ -577,7 +587,7 @@ namespace lab4_5
             
             uint fragmentLight;
             fragmentLight = gl.CreateShader(OpenGL.GL_FRAGMENT_SHADER);
-            s = ReadFromRes("lab4-5.FragmentLight.glsl");
+            s = ReadFromRes("lab4-5-6.FragmentLight.glsl");
             gl.ShaderSource(fragmentLight, s);
             gl.CompileShader(fragmentLight);
                 
@@ -613,6 +623,12 @@ namespace lab4_5
             gl.GenBuffers(3, VBO);
             _drawingArea.Render += (o, args) =>
             {
+                
+                if (!_animation.Active)
+                {
+                    startTime = (float)frame_clock.FrameTime;
+                }
+                
                 gl.BindVertexArray(VAO[0]);
                 gl.BindBuffer(OpenGL.GL_ARRAY_BUFFER, VBO[0]);
                 gl.BindBuffer(OpenGL.GL_ELEMENT_ARRAY_BUFFER, VBO[1]);
@@ -749,6 +765,32 @@ namespace lab4_5
                 loc = gl.GetUniformLocation(lightProgram, "view4f");
                 gl.UniformMatrix4(loc, 1, true, view.ToArray());
 
+
+                if (_animation.Active)
+                {
+                    gl.UseProgram(shaderProgram);
+                    loc = gl.GetUniformLocation(shaderProgram, "animation");
+                    gl.Uniform1(loc, 1);
+                    loc = gl.GetUniformLocation(shaderProgram, "t");
+                    gl.Uniform1(loc, (float)((frame_clock.FrameTime - startTime)/1000000));
+                    
+                    gl.UseProgram(lightProgram);
+                    loc = gl.GetUniformLocation(lightProgram, "animation");
+                    gl.Uniform1(loc, 1);
+                    loc = gl.GetUniformLocation(lightProgram, "t");
+                    gl.Uniform1(loc, (float)((frame_clock.FrameTime - startTime)/1000000));
+                }
+                else
+                {
+                    gl.UseProgram(shaderProgram);
+                    loc = gl.GetUniformLocation(shaderProgram, "animation");
+                    gl.Uniform1(loc, 0);
+                    
+                    gl.UseProgram(lightProgram);
+                    loc = gl.GetUniformLocation(lightProgram, "animation");
+                    gl.Uniform1(loc, 0);
+                }
+                
                 loc = gl.GetUniformLocation(lightProgram, "m.ka");
                 gl.Uniform3(loc, (float) _kar.Value, (float) _kag.Value, (float) _kab.Value);
                 loc = gl.GetUniformLocation(lightProgram, "m.kd");
@@ -824,8 +866,6 @@ namespace lab4_5
                         {
                             gl.BindVertexArray(VAO[0]);
                             gl.UseProgram(lightProgram);
-                            // loc = gl.GetUniformLocation(lightProgram, "model4f");
-                            // gl.UniformMatrix4(loc, 1, false, model.ToArray());
                             loc = gl.GetUniformLocation(lightProgram, "c");
                             gl.Uniform3(loc, 1f, 1f, 1f);
                             gl.LineWidth(2);
@@ -833,6 +873,19 @@ namespace lab4_5
                             gl.CullFace(OpenGL.GL_BACK);
                             gl.DrawElements(OpenGL.GL_TRIANGLES, masid.Length, OpenGL.GL_UNSIGNED_INT, (IntPtr)0);
                         }
+                    }
+                }
+                else
+                {
+                    if (_lines.Active)
+                    {
+                        gl.UseProgram(shaderProgram);
+                        loc = gl.GetUniformLocation(shaderProgram, "c");
+                        gl.Uniform4(loc, 1f, 1f, 1f, 1);
+                        gl.LineWidth(4);
+                        gl.PolygonMode(OpenGL.GL_FRONT_AND_BACK, OpenGL.GL_LINE);
+                        gl.CullFace(OpenGL.GL_BACK);
+                        gl.DrawElements(OpenGL.GL_TRIANGLES, masid.Length, OpenGL.GL_UNSIGNED_INT, (IntPtr)0);
                     }
                 }
                 gl.BindVertexArray(0);
