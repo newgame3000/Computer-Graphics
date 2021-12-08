@@ -123,7 +123,7 @@ namespace lab4_5_6
         private float[] masver;
         private uint[] masid;
         private uint VCount = 0;
-        private Camera camera = new Camera(new Vector3(0, 1,-1), new Vector3(0, 0, 0), new Vector3(0, 1, 0));
+        private Camera camera = new Camera(new Vector3(0, 0, -1), new Vector3(0, 0, 0), new Vector3(0, 1, 0));
 
         private bool motion = false;
         private float Oldx = -1;
@@ -517,16 +517,16 @@ namespace lab4_5_6
            {
                if (args.Event.Direction == ScrollDirection.Down)
                {
-                   _scaleX.Value -= 0.1;
-                   _scaleY.Value -= 0.1;
-                   _scaleZ.Value -= 0.1;
+                   _scaleX.Value -= 0.01;
+                   _scaleY.Value -= 0.01;
+                   _scaleZ.Value -= 0.01;
                    
                }
                else if (args.Event.Direction == ScrollDirection.Up)
                {
-                   _scaleX.Value += 0.1;
-                   _scaleY.Value += 0.1;
-                   _scaleZ.Value += 0.1;
+                   _scaleX.Value += 0.01;
+                   _scaleY.Value += 0.01;
+                   _scaleZ.Value += 0.01;
                }
            };
            DeleteEvent += Window_DeleteEvent;
@@ -566,7 +566,7 @@ namespace lab4_5_6
                 
             System.Text.StringBuilder txt = new System.Text.StringBuilder(512);
             gl.GetShaderInfoLog(vertexShader, 512, (IntPtr)0, txt);
-            Console.WriteLine(txt);
+            //Console.WriteLine(txt);
 
             var glsl_tmp = new int[1];
             gl.GetShader(vertexShader, OpenGL.GL_COMPILE_STATUS, glsl_tmp);
@@ -580,7 +580,7 @@ namespace lab4_5_6
                 
             txt = new System.Text.StringBuilder(512);
             gl.GetShaderInfoLog(fragmentShader, 512, (IntPtr)0, txt);
-            Console.WriteLine(txt);
+            // Console.WriteLine(txt);
             gl.GetShader(fragmentShader, OpenGL.GL_COMPILE_STATUS, glsl_tmp);
             Debug.Assert(glsl_tmp[0] == OpenGL.GL_TRUE, "Shader compilation failed");
                  
@@ -593,7 +593,7 @@ namespace lab4_5_6
                 
             txt = new System.Text.StringBuilder(512);
             gl.GetShaderInfoLog(fragmentLight, 512, (IntPtr)0, txt);
-            Console.WriteLine(txt);
+            //Console.WriteLine(txt);
             gl.GetShader(fragmentLight, OpenGL.GL_COMPILE_STATUS, glsl_tmp);
             Debug.Assert(glsl_tmp[0] == OpenGL.GL_TRUE, "Shader compilation failed");
             
@@ -638,8 +638,7 @@ namespace lab4_5_6
 
                 gl.VertexAttribPointer(0, 3, OpenGL.GL_FLOAT, false,0, (IntPtr)0);
                 gl.VertexAttribPointer(1, 3, OpenGL.GL_FLOAT, false,0, (IntPtr)(sizeof(float) * VCount * 3));
-                Console.WriteLine(VCount * 3);
-                
+
                 gl.EnableVertexAttribArray(0);
                 gl.EnableVertexAttribArray(1);
                 
@@ -648,6 +647,7 @@ namespace lab4_5_6
                 
                 gl.BindVertexArray(VAO[1]);
                 gl.BindBuffer(OpenGL.GL_ARRAY_BUFFER, VBO[2]);
+
                 float[] l = new float[3];
                 l[0] = (float) _lx.Value;
                 l[1] = (float) _ly.Value;
@@ -791,6 +791,7 @@ namespace lab4_5_6
                     gl.Uniform1(loc, 0);
                 }
                 
+                gl.UseProgram(lightProgram);
                 loc = gl.GetUniformLocation(lightProgram, "m.ka");
                 gl.Uniform3(loc, (float) _kar.Value, (float) _kag.Value, (float) _kab.Value);
                 loc = gl.GetUniformLocation(lightProgram, "m.kd");
@@ -799,6 +800,9 @@ namespace lab4_5_6
                 gl.Uniform3(loc, (float) _ksr.Value, (float) _ksg.Value, (float) _ksb.Value);
                 loc = gl.GetUniformLocation(lightProgram, "m.p");
                 gl.Uniform1(loc, (float)_p.Value);
+                
+                loc = gl.GetUniformLocation(lightProgram, "camera");
+                gl.Uniform3(loc, (float)camera.Position.X, (float) camera.Position.Y, (float) camera.Position.Y);
                 
                 loc = gl.GetUniformLocation(lightProgram, "l.ia");
                 gl.Uniform3(loc, (float) _iar.Value, (float) _iag.Value, (float) _iab.Value);
@@ -853,7 +857,6 @@ namespace lab4_5_6
                              gl.BindVertexArray(0);
                              gl.BindVertexArray(VAO[0]);
                         }
-                        
                         
                         gl.UseProgram(lightProgram);
                         loc = gl.GetUniformLocation(lightProgram, "c");
@@ -935,7 +938,7 @@ namespace lab4_5_6
                 var matrix1 = Matrix4x4.CreateFromAxisAngle(cameraRight, -0.01f * dX);
                 var matrix2 = Matrix4x4.CreateFromAxisAngle(camera.Up, -0.01f * dY);
                 
-                var npos = Vector3.Transform(camera.Position, matrix1 * matrix2);
+                var npos = Vector3.Transform(camera.Position, matrix2 * matrix1);
                 camera.Up = Vector3.Normalize(Vector3.Transform(camera.Up, matrix1));
                 camera.Position = Vector3.Normalize(npos) * camera.Position.Length();
                 _drawingArea.QueueDraw();

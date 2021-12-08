@@ -2,7 +2,6 @@
 layout (location = 0) in  vec3 coord3f;
 layout (location = 1) in  vec3 normalf;
 
-
 uniform mat4 proj4f;
 uniform mat4 view4f;
 uniform mat4 model4f;
