@@ -1,10 +1,8 @@
-#folders
-bin/
-obj/
-/packages/
-/_ReSharper.Caches/
+*.glade~
+*.glade#
+
+*.user
 .idea/
-
-#files
-riderModule.iml
-
+[Bb]in/
+[Oo]bj/
+[Pp]ackages/
