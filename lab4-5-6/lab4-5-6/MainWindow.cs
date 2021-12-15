@@ -816,8 +816,22 @@ namespace lab4_5_6
                 
                 loc = gl.GetUniformLocation(lightProgram, "k");
                 gl.Uniform1(loc, (float) _k.Value);
+
+                loc = gl.GetUniformLocation(lightProgram, "width");
+                gl.Uniform1(loc, (float) width);
                 
+                loc = gl.GetUniformLocation(lightProgram, "height");
+                gl.Uniform1(loc, (float) height);
+
+
                 gl.UseProgram(shaderProgram);
+                
+                 loc = gl.GetUniformLocation(shaderProgram, "width");
+                gl.Uniform1(loc, (float) width);
+                
+                loc = gl.GetUniformLocation(shaderProgram, "height");
+                gl.Uniform1(loc, (float) height);
+                
                 loc = gl.GetUniformLocation(shaderProgram, "c");
                 gl.Uniform4(loc, (float)_r.Value, (float) _g.Value, (float) _bl.Value, 1);
                 
