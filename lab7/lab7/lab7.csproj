@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net5.0</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Remove="**\*.glade" />
+        <EmbeddedResource Include="**\*.glade">
+            <LogicalName>%(Filename)%(Extension)</LogicalName>
+        </EmbeddedResource>
+        <None Remove="FragmentShader.glsl" />
+        <EmbeddedResource Include="FragmentShader.glsl" />
+        <None Remove="VertexShader.glsl" />
+        <EmbeddedResource Include="VertexShader.glsl" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="GtkSharp" Version="3.24.24.*" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Reference Include="CGPlatform, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
+        <HintPath>..\CGPlatform\bin\Debug\netstandard2.1\CGPlatform.dll</HintPath>
+      </Reference>
+    </ItemGroup>
+
+</Project>
