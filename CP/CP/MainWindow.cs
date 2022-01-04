@@ -247,7 +247,6 @@ namespace CP
 
         void Figure()
         {
-            debug = new List<float>();
             dr = new List<Vertex>();
             
             float du = (float) (1f / _u.Value);
