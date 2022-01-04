@@ -11,6 +11,7 @@ using Gdk;
 using SharpGL;
 using System.Reflection;
 using System.Diagnostics;
+using System.Globalization;
 using System.Text;
 using Window = Gtk.Window;
 using System.IO;
@@ -23,6 +24,7 @@ namespace CP
     class MainWindow : Window
     {
         [UI] private GLArea _drawingArea = null;
+        
         [UI] private Adjustment _shiftX = null;
         [UI] private Adjustment _shiftY = null;
         [UI] private Adjustment _shiftZ = null;
@@ -32,26 +34,24 @@ namespace CP
         [UI] private Adjustment _rotationX = null;
         [UI] private Adjustment _rotationY = null;
         [UI] private Adjustment _rotationZ = null;
+        
         [UI] private CheckButton _lines = null;
         [UI] private CheckButton _fill = null;
         [UI] private CheckButton _light = null;
         [UI] private CheckButton _showLight = null;
         [UI] private CheckButton _animation = null;
-        //
-        // [UI] private Adjustment _a = null;
-        // [UI] private Adjustment _b = null;
-        // [UI] private Adjustment _c = null;
+        [UI] private CheckButton _points = null;
+        [UI] private CheckButton _norm = null;
+        [UI] private CheckButton _genp = null;
+        
         [UI] private Adjustment _u = null;
         [UI] private Adjustment _v = null;
-        
         [UI] private Adjustment _cposX = null;
         [UI] private Adjustment _cposY = null;
         [UI] private Adjustment _cposZ = null;
-        
         [UI] private Adjustment _r = null;
         [UI] private Adjustment _g = null;
         [UI] private Adjustment _bl = null;
-        
         [UI] private Adjustment _kar = null;
         [UI] private Adjustment _kag = null;
         [UI] private Adjustment _kab = null;
@@ -61,23 +61,21 @@ namespace CP
         [UI] private Adjustment _ksr = null;
         [UI] private Adjustment _ksg = null;
         [UI] private Adjustment _ksb = null;
-        
         [UI] private Adjustment _lx = null;
         [UI] private Adjustment _ly = null;
         [UI] private Adjustment _lz = null;
-        
         [UI] private Adjustment _iar = null;
         [UI] private Adjustment _iag = null;
         [UI] private Adjustment _iab = null;
         [UI] private Adjustment _ilr = null;
         [UI] private Adjustment _ilg = null;
         [UI] private Adjustment _ilb = null;
-        
         [UI] private Adjustment _p = null;
         [UI] private Adjustment _k = null;
-        
         [UI] private Adjustment _beta1 = null;
         [UI] private Adjustment _beta2 = null;
+        
+        [UI] private FileChooserButton _load = null;
         
         class Vertex
         {
@@ -121,8 +119,7 @@ namespace CP
         }
 
         List<Vertex> dr = new List<Vertex>();
-        List<float> debug = new List<float>();
-        
+
         private List<Polygon> Polygons = new List<Polygon>();
         private List<List<Vertex>> Verticies = new List<List<Vertex>>();
         static OpenGL gl = new SharpGL.OpenGL();
@@ -139,6 +136,7 @@ namespace CP
         private double width = 0;
         private double height = 0;
         private float startTime;
+        private int angle = 60;
         
         public MainWindow() : this(new Builder("MainWindow.glade"))
         {
@@ -211,20 +209,9 @@ namespace CP
 
             return b_i;
         }
-        
-        void Figure()
+
+        void Elementary_beta_spline(float du, float dv, float delta, int k1, int k2)
         {
-            debug = new List<float>();
-            dr = new List<Vertex>();
-            float du = (float) (1f / _u.Value);
-            float dv = (float) (1f / _v.Value);
-
-            // _beta1.Value = 1;
-            // _beta2.Value = 1;
-
-            float delta = 2 * (float) _beta1.Value * (float) _beta1.Value * (float) _beta1.Value +
-                          4 * (float) _beta1.Value * (float) _beta1.Value + 4 * (float) _beta1.Value +
-                          (float) _beta2.Value + 2;
             float u = 0;
             float v = 0;
             
@@ -233,27 +220,18 @@ namespace CP
                 for (int t2 = 0; t2 <= (int)_v.Value; ++t2)
                 {
                     Vector3 res = new Vector3(0, 0, 0);
-                    for (int i = 0; i < Verticies.Count; ++i)
+                    for (int i = k1; i < k1 + 4; ++i)
                     {
-                        for (int j = 0; j < Verticies[i].Count; ++j)
+                        float b_i = coeffB(i, u, delta);
+                        for (int j = k2; j < k2 + 4; ++j)
                         {
-                            float b_i = coeffB(i, u, delta);
                             float b_j = coeffB(j, v, delta);
                             
                             res.X += b_i * b_j * Verticies[i][j].Point.X;
                             res.Y += b_i * b_j * Verticies[i][j].Point.Y;
                             res.Z += b_i * b_j * Verticies[i][j].Point.Z;
-                            
-                            //  dr.Add( Verticies[i][j].Point.X);
-                            // dr.Add( Verticies[i][j].Point.Y);
-                            // // dr.Add( Verticies[i][j].Point.Z);
                         }
                     }
-                    
-                    debug.Add( res.X);
-                    debug.Add( res.Y);
-                    debug.Add( res.Z);
-                    
                     dr.Add(new Vertex(res.X, res.Y, res.Z));
 
                     dr[dr.Count - 1].Id = (uint) dr.Count - 1;
@@ -264,13 +242,32 @@ namespace CP
                 v = 0;
                 u += du;
             }
+        }
 
-            // float[] masver = new float[dr.Count];
+
+        void Figure()
+        {
+            debug = new List<float>();
+            dr = new List<Vertex>();
+            
+            float du = (float) (1f / _u.Value);
+            float dv = (float) (1f / _v.Value);
+            
+            float delta = 2 * (float) _beta1.Value * (float) _beta1.Value * (float) _beta1.Value +
+                          4 * (float) _beta1.Value * (float) _beta1.Value + 4 * (float) _beta1.Value +
+                          (float) _beta2.Value + 2;
+
+
+            for (int i = 0; i < Verticies.Count - 3; ++i)
+            {
+                for (int j = 0; j < Verticies[i].Count - 3; ++j)
+                {
+                    Elementary_beta_spline(du, dv, delta, i, j);
+                }
+            }
+            
 
             Polygons = new List<Polygon>();
-            
-            //1 2 3 4  5  6
-            //7 8 9 10 11 12
 
             for (int i = 0; i < (int) _u.Value; ++i)
             {
@@ -285,7 +282,6 @@ namespace CP
                     dr[i * ((int)_v.Value + 1) + j + 1].polygons.Add(Polygons[Polygons.Count - 1]);
                     dr[i * ((int)_v.Value + 1) + j + ((int)_v.Value + 1)].polygons.Add(Polygons[Polygons.Count - 1]);
                     
-                    
                     Polygons.Add(new Polygon());
                     Polygons[Polygons.Count - 1].points.Add(dr[i * ((int)_v.Value + 1) + j + 1]);
                     Polygons[Polygons.Count - 1].points.Add(dr[i * ((int)_v.Value + 1) + j + 1 + (int)_v.Value + 1]);
@@ -297,37 +293,7 @@ namespace CP
                 }
 
             }
-
-
-            // for (int i = 0; i < dr.Count - ((int)_v.Value + 1) - 1; ++i)
-            // {
-            //
-            //     if ((i + 1) % ((int)_v.Value + 1) == 0)
-            //     {
-            //         continue;
-            //     }
-            //     
-            //     Polygons.Add(new Polygon());
-            //     Polygons[Polygons.Count - 1].points.Add(dr[i]);
-            //     Polygons[Polygons.Count - 1].points.Add(dr[i + 1]);
-            //     Polygons[Polygons.Count - 1].points.Add(dr[(i + (int)_v.Value) % dr.Count]);
-            //     
-            //    // Polygons[Polygons.Count - 1].points.Add(dr[i + 1]);
-            //    
-            //     dr[i].polygons.Add(Polygons[Polygons.Count - 1]);
-            //     dr[i + 1].polygons.Add(Polygons[Polygons.Count - 1]);
-            //     dr[(i + (int)_v.Value) % dr.Count].polygons.Add(Polygons[Polygons.Count - 1]);
-            //    
-            //     Polygons.Add(new Polygon());
-            //     Polygons[Polygons.Count - 1].points.Add(dr[i + 1]);
-            //     Polygons[Polygons.Count - 1].points.Add(dr[(i + 1 +(int)_v.Value) % dr.Count]);
-            //     Polygons[Polygons.Count - 1].points.Add(dr[(i + (int)_v.Value) % dr.Count]);
-            //    
-            //     dr[i + 1].polygons.Add(Polygons[Polygons.Count - 1]);
-            //     dr[(i + 1 +(int)_v.Value) % dr.Count].polygons.Add(Polygons[Polygons.Count - 1]);
-            //     dr[(i + (int)_v.Value) % dr.Count].polygons.Add(Polygons[Polygons.Count - 1]);
-            // }
-            //
+            
             foreach (var pol in Polygons)
             { 
                 Normals(pol);
@@ -372,10 +338,6 @@ namespace CP
             
             masid = new uint[Polygons.Count * 3];
             k = 0;
-            // for (int i = 0; i < dr.Count; ++i)
-            // {
-            //     masid[k]
-            // }
 
             foreach (var pol in Polygons)
             {
@@ -397,6 +359,7 @@ namespace CP
             _drawingArea.Events |= EventMask.ScrollMask;
             _drawingArea.Events |= EventMask.ButtonPressMask | EventMask.PointerMotionMask  | EventMask.ButtonReleaseMask;
             _drawingArea.Resize += DrawingAreaResizeEvent;
+            _load.SetCurrentFolder("./");
             
             _shiftX.ValueChanged += ValueChanged;
             _shiftY.ValueChanged += ValueChanged;
@@ -419,8 +382,7 @@ namespace CP
             _u.ValueChanged += ValueChanged2;
             _v.ValueChanged += ValueChanged2;
             _beta1.ValueChanged += ValueChanged2;
-            _beta1.ValueChanged += ValueChanged2;
-            //_c.ValueChanged += ValueChanged2;
+            _beta2.ValueChanged += ValueChanged2;
 
             _r.ValueChanged += ValueChanged;
             _g.ValueChanged += ValueChanged;
@@ -460,19 +422,89 @@ namespace CP
            {
                if (args.Event.Direction == ScrollDirection.Down)
                {
-                   _scaleX.Value -= 0.1;
-                   _scaleY.Value -= 0.1;
-                   _scaleZ.Value -= 0.1;
-                   
+                   // _scaleX.Value -= 0.1;
+                   // _scaleY.Value -= 0.1;
+                   // _scaleZ.Value -= 0.1;
+                   angle += 1;
+                   angle = Math.Min(180, angle);
+
                }
                else if (args.Event.Direction == ScrollDirection.Up)
                {
-                   _scaleX.Value += 0.1;
-                   _scaleY.Value += 0.1;
-                   _scaleZ.Value += 0.1;
+                   // _scaleX.Value += 0.1;
+                   // _scaleY.Value += 0.1;
+                   // _scaleZ.Value += 0.1;
+                   angle -= 1;
+                   angle = Math.Max(0, angle);
                }
            };
+            
+            _load.FileSet += LoadFile;
+            _load.FileActivated += LoadFile;
+            
            DeleteEvent += Window_DeleteEvent;
+        }
+
+        private void LoadFile(object? sender, EventArgs e)
+        {
+            StreamReader file = new StreamReader(_load.Filename);
+            string s = "";
+            VCount = 0;
+            int k = 0;
+            float u = 0, v = 0, beta1 = 0, beta2 = 0;
+            Verticies = new List<List<Vertex>>();
+            while ((s = file.ReadLine()) != null)
+            {
+                string[] num = s.Split(" ");
+                if (k == 0)
+                {
+                    beta1 = (float)Convert.ToDouble(num[0], CultureInfo.InvariantCulture);
+                    beta2 = (float)Convert.ToDouble(num[1], CultureInfo.InvariantCulture);
+                    k += 1;
+                    continue;
+                }
+
+                if (k == 1)
+                {
+                    u = (float)Convert.ToDouble(num[0], CultureInfo.InvariantCulture);
+                    v = (float)Convert.ToDouble(num[1], CultureInfo.InvariantCulture);
+                    k += 1;
+                    continue;
+                }
+
+                Verticies.Add(new List<Vertex>());
+                for (int i = 0; i < num.Length; i += 3)
+                {
+                    float x = (float)Convert.ToDouble(num[i], CultureInfo.InvariantCulture);
+                    float y = (float)Convert.ToDouble(num[i + 1], CultureInfo.InvariantCulture);
+                    float z = (float)Convert.ToDouble(num[i + 2], CultureInfo.InvariantCulture);
+                    Verticies[Verticies.Count - 1].Add(new Vertex(x, y, z));
+                    VCount += 1;
+                }
+            }
+            
+            _u.Value = u;
+            _v.Value = v;
+            _beta1.Value = beta1;
+            _beta2.Value = beta2;
+            Figure();
+            _drawingArea.QueueRender();
+        }
+        
+        private Matrix4f Perspective(double verticalAngle, double aspectRatio, double nearPlane, double farPlane) {
+            var radians = (verticalAngle / 2) * Math.PI / 180;
+            var sine = Math.Sin(radians);
+
+            var cotan = Math.Cos(radians) / sine;
+            var clip = farPlane - nearPlane;
+            Matrix4f t1 = new Matrix4f
+            (
+                (float)cotan / (float)aspectRatio, 0, 0, 0,
+                0, (float)cotan, 0, 0,
+                0, 0, -((float)nearPlane + (float)farPlane) / (float)clip, -(float)(2.0 * (float)nearPlane * (float)farPlane) / (float)clip,
+                0, 0, (float)-1.0, (float)1.0
+            );
+            return t1;
         }
 
         private void CposXValueChanged(object? sender, EventArgs e)
@@ -500,9 +532,9 @@ namespace CP
             frame_clock.Update += (_, _) => _drawingArea.QueueRender();
             frame_clock.BeginUpdating();
             
-             uint vertexShader;
+            uint vertexShader;
 
-             vertexShader = gl.CreateShader(OpenGL.GL_VERTEX_SHADER);
+            vertexShader = gl.CreateShader(OpenGL.GL_VERTEX_SHADER);
             string s = ReadFromRes("CP.VertexShader.glsl");
             gl.ShaderSource(vertexShader, s);
             gl.CompileShader(vertexShader);
@@ -560,27 +592,30 @@ namespace CP
             
             
             Verticies.Add(new List<Vertex> {
-                new(-3 / 3, 0, -3 / 3), new(-1 / 3 , 0, -3 / 3), new(1 / 3, 0, -3 / 3), new(3 / 3, 0, -3 / 3)
+                new(-1, 0, -1), new((float)-0.33 , 0, -1), new((float)0.33, 0, -1), new(1, 0, -1)
             });
             
             Verticies.Add(new List<Vertex> {
-               new(-3 / 3, 0, -1 / 3), new(-1 / 3, 0, -1 / 3), new(1 / 3, 0, -1 / 3), new(3 / 3, 0, -1 / 3)
+               new(-1, 0, (float)-0.33), new((float)-0.33, 0, (float)-0.33), new((float)0.33, 0, (float)-0.33), new(1, 0, (float)-0.33)
             });
             
             Verticies.Add(new List<Vertex> {
-                new(-3 / 3, 0, 1 / 3), new(-1 / 3, 0, 1 / 3), new(1 / 3, 0, 1 / 3), new(3 / 3, 0, 1 / 3)
+                new(-1, 0, (float)0.33), new((float)-0.33, 0, (float)0.33), new((float)0.33, 0, (float)0.33), new(1, 0, (float)0.33)
             });
             
             Verticies.Add(new List<Vertex> {
-                 new(-3 / 3, 0, 3 / 3), new(-1 / 3, 0, 3 / 3), new(1 / 3 , 0, 3 / 3), new(3 / 3, 0, 3 / 3)
+                 new(-1, 0, 1), new((float)-0.33, 0, 1), new((float)0.33 , 0, 1), new(1, 0, 1)
             });
+
+            VCount = 16;
+            
 
             Figure();
 
-            uint[] VAO = new uint[2];
-            uint[] VBO = new uint[3];
-            gl.GenVertexArrays(2, VAO);
-            gl.GenBuffers(3, VBO);
+            uint[] VAO = new uint[5];
+            uint[] VBO = new uint[6];
+            gl.GenVertexArrays(5, VAO);
+            gl.GenBuffers(6, VBO);
             _drawingArea.Render += (o, args) =>
             {
                 
@@ -597,7 +632,7 @@ namespace CP
                 gl.BufferData(OpenGL.GL_ELEMENT_ARRAY_BUFFER, masid, OpenGL.GL_DYNAMIC_DRAW);
 
                 gl.VertexAttribPointer(0, 3, OpenGL.GL_FLOAT, false,0, (IntPtr)0);
-                gl.VertexAttribPointer(1, 3, OpenGL.GL_FLOAT, false,0, (IntPtr)(sizeof(float) * VCount * 3));
+                gl.VertexAttribPointer(1, 3, OpenGL.GL_FLOAT, false,0, (IntPtr)(sizeof(float) * dr.Count * 3));
 
                 gl.EnableVertexAttribArray(0);
                 gl.EnableVertexAttribArray(1);
@@ -617,6 +652,70 @@ namespace CP
                 gl.EnableVertexAttribArray(0);
                 gl.BindVertexArray(0);
                 
+                gl.BindVertexArray(VAO[2]);
+                gl.BindBuffer(OpenGL.GL_ARRAY_BUFFER, VBO[3]);
+                gl.EnableVertexAttribArray(0);
+                float[] pts = new float[VCount * 3];
+                int t = 0;
+                for (int i = 0; i < Verticies.Count; ++i)
+                {
+                    for (int j = 0; j < Verticies[i].Count; ++j)
+                    {
+                        pts[t] = Verticies[i][j].Point.X;
+                        t += 1;
+                        pts[t] = Verticies[i][j].Point.Y;
+                        t += 1;
+                        pts[t] = Verticies[i][j].Point.Z;
+                        t += 1;
+                    }
+                }
+                gl.VertexAttribPointer(0, 3, OpenGL.GL_FLOAT, false, 0, IntPtr.Zero);
+                gl.BufferData(OpenGL.GL_ARRAY_BUFFER, pts , OpenGL.GL_DYNAMIC_DRAW);
+                gl.BindVertexArray(0);
+                
+                gl.BindVertexArray(VAO[3]);
+                gl.BindBuffer(OpenGL.GL_ARRAY_BUFFER, VBO[4]);
+                gl.EnableVertexAttribArray(0);
+                float[] nrml = new float[dr.Count * 6];
+                t = 0;
+                for (int i = 0; i < dr.Count; ++i)
+                {
+                        nrml[t] = dr[i].Point.X;
+                        t += 1;
+                        nrml[t] = dr[i].Point.Y;
+                        t += 1;
+                        nrml[t] = dr[i].Point.Z;
+                        t += 1;
+                        nrml[t] = dr[i].NormalInWorldSpace.X;
+                        t += 1;
+                        nrml[t] = dr[i].NormalInWorldSpace.Y;
+                        t += 1;
+                        nrml[t] = dr[i].NormalInWorldSpace.Z;
+                        t += 1;
+                }
+                gl.VertexAttribPointer(0, 3, OpenGL.GL_FLOAT, false, 0, IntPtr.Zero);
+                gl.BufferData(OpenGL.GL_ARRAY_BUFFER, nrml , OpenGL.GL_DYNAMIC_DRAW);
+                gl.BindVertexArray(0);
+                
+                gl.BindVertexArray(VAO[4]);
+                gl.BindBuffer(OpenGL.GL_ARRAY_BUFFER, VBO[5]);
+                gl.EnableVertexAttribArray(0);
+                float[] gen = new float[dr.Count * 3];
+                t = 0;
+                for (int i = 0; i < dr.Count; ++i)
+                {
+                        gen[t] = dr[i].Point.X;
+                        t += 1;
+                        gen[t] = dr[i].Point.Y;
+                        t += 1;
+                        gen[t] = dr[i].Point.Z;
+                        t += 1;
+                }
+                gl.VertexAttribPointer(0, 3, OpenGL.GL_FLOAT, false, 0, IntPtr.Zero);
+                gl.BufferData(OpenGL.GL_ARRAY_BUFFER, gen , OpenGL.GL_DYNAMIC_DRAW);
+                gl.BindVertexArray(0);
+                
+                
                 gl.FrontFace(OpenGL.GL_CW);
 
                 gl.Enable(OpenGL.GL_DEPTH_TEST);
@@ -625,7 +724,7 @@ namespace CP
                 gl.Enable(OpenGL.GL_BLEND);
                 gl.BlendFunc(OpenGL.GL_SRC_ALPHA, OpenGL.GL_ONE_MINUS_SRC_ALPHA);
 
-                gl.Enable(OpenGL.GL_CULL_FACE);
+                //gl.Enable(OpenGL.GL_CULL_FACE);
 
                 gl.Enable(OpenGL.GL_LINE_SMOOTH);
                 gl.Hint(OpenGL.GL_LINE_SMOOTH_HINT, OpenGL.GL_NICEST);
@@ -634,11 +733,16 @@ namespace CP
                 
                 gl.Clear(OpenGL.GL_COLOR_BUFFER_BIT | OpenGL.GL_DEPTH_BUFFER_BIT);
 
-                var proj = Matrix4f.Identity;
-                proj[1,1] = (float)Math.Min(height / width, 1);
-                proj[2,2] = (float)Math.Min(width / height, 1);
                 
-                gl.UseProgram(shaderProgram);
+                // var proj = Matrix4f.Identity;
+                // gl.MatrixMode(OpenGL.GL_PROJECTION);
+                var proj = Perspective(angle, (double)width / height, 1, 100);
+                // proj[0, 0] = Math.Min(height / width, 1);
+                // proj[1, 1] = Math.Min(width / height, 1);
+                //gl.LoadMatrix(proj);
+                
+                
+                
                 int loc = gl.GetUniformLocation(shaderProgram, "proj4f");
                 gl.UniformMatrix4(loc, 1, false, proj.ToArray());
                 
@@ -646,6 +750,8 @@ namespace CP
                 loc = gl.GetUniformLocation(lightProgram, "proj4f");
                 gl.UniformMatrix4(loc, 1, false, proj.ToArray());
                 
+                gl.UseProgram(shaderProgram);
+
                 var model = Matrix4f.Identity;
                 model[1, 1] = (float)_scaleX.Value;;
                 model[2, 2] = (float)_scaleY.Value;
@@ -691,16 +797,19 @@ namespace CP
                 loc = gl.GetUniformLocation(lightProgram, "model4f");
                 gl.UniformMatrix4(loc, 1, false, model.ToArray());
                 
+                // gl.LoadMatrix(pMatrix.ToArray(true));
+                
+                
                 var view = Matrix4f.Identity;
                 Vector3 cameraDirection = (camera.Position - camera.Target);
                 cameraDirection = Vector3.Normalize(cameraDirection);
                 Vector3 cameraRight = Vector3.Cross(camera.Up, cameraDirection);
                 cameraRight = Vector3.Normalize(cameraRight);
-
+                
                 view[1, 1] = cameraRight.X;
                 view[1, 2] = cameraRight.Y;
                 view[1, 3] = cameraRight.Z;
-                
+
                 view[2, 1] = camera.Up.X;
                 view[2, 2] = camera.Up.Y;
                 view[2, 3] = camera.Up.Z;
@@ -711,12 +820,13 @@ namespace CP
                 view[4, 4] = 1;
                 
                 var view2 = Matrix4f.Identity;
-                view2[4, 1] = -camera.Position.X;
-                view2[4, 2] = -camera.Position.Y;
-                view2[4, 3] = -camera.Position.Z;
-
-                view = view * view2;
+                view2[1, 4] = -camera.Position.X;
+                view2[2, 4] = -camera.Position.Y;
+                view2[3, 4] = -camera.Position.Z;
                 
+                view = view * view2;
+
+
                 gl.UseProgram(shaderProgram);
                 loc = gl.GetUniformLocation(shaderProgram, "view4f");
                 gl.UniformMatrix4(loc, 1, true, view.ToArray());
@@ -805,19 +915,9 @@ namespace CP
                         gl.CullFace(OpenGL.GL_BACK);
                         gl.PolygonMode(OpenGL.GL_FRONT_AND_BACK, OpenGL.GL_FILL);
                         gl.DrawElements(OpenGL.GL_TRIANGLES, masid.Length, OpenGL.GL_UNSIGNED_INT, (IntPtr) 0);
-                        if (_lines.Active)
-                        {
-                            loc = gl.GetUniformLocation(shaderProgram, "c");
-                            gl.Uniform4(loc, 1f, 1f, 1f, 1);
-                            gl.LineWidth(4);
-                            gl.PolygonMode(OpenGL.GL_FRONT_AND_BACK, OpenGL.GL_LINE);
-                            gl.CullFace(OpenGL.GL_BACK);
-                            gl.DrawElements(OpenGL.GL_TRIANGLES, masid.Length, OpenGL.GL_UNSIGNED_INT, (IntPtr)0);
-                        }
                     }
                     else
                     {
-                        
                         if (_showLight.Active)
                         {
                              gl.BindVertexArray(VAO[1]);
@@ -825,8 +925,8 @@ namespace CP
                              loc = gl.GetUniformLocation(shaderProgram, "model4f");
                              gl.UniformMatrix4(loc, 1, false, Matrix4f.Identity.ToArray());
                              loc = gl.GetUniformLocation(lightProgram, "c");
-                             gl.Uniform4(loc, 1f, 0f, 0f, 1);
-                             gl.PointSize(5);
+                             gl.Uniform4(loc, 0f, 0f, 0f, 1);
+                             gl.PointSize(10);
                              gl.DrawArrays(OpenGL.GL_POINTS, 0, 1);
                              gl.BindVertexArray(0);
                              gl.BindVertexArray(VAO[0]);
@@ -838,33 +938,55 @@ namespace CP
                         gl.CullFace(OpenGL.GL_BACK);
                         gl.PolygonMode(OpenGL.GL_FRONT_AND_BACK, OpenGL.GL_FILL);
                         gl.DrawElements(OpenGL.GL_TRIANGLES, masid.Length, OpenGL.GL_UNSIGNED_INT, (IntPtr) 0);
+                    }
+                }
 
-                        if (_lines.Active)
-                        {
-                            gl.BindVertexArray(VAO[0]);
-                            gl.UseProgram(lightProgram);
-                            loc = gl.GetUniformLocation(lightProgram, "c");
-                            gl.Uniform3(loc, 1f, 1f, 1f);
-                            gl.LineWidth(2);
-                            gl.PolygonMode(OpenGL.GL_FRONT_AND_BACK, OpenGL.GL_LINE);
-                            gl.CullFace(OpenGL.GL_BACK);
-                            gl.DrawElements(OpenGL.GL_TRIANGLES, masid.Length, OpenGL.GL_UNSIGNED_INT, (IntPtr)0);
-                        }
-                    }
-                }
-                else
+                if (_lines.Active)
                 {
-                    if (_lines.Active)
-                    {
-                        gl.UseProgram(shaderProgram);
-                        loc = gl.GetUniformLocation(shaderProgram, "c");
-                        gl.Uniform4(loc, 1f, 1f, 1f, 1);
-                        gl.LineWidth(4);
-                        gl.PolygonMode(OpenGL.GL_FRONT_AND_BACK, OpenGL.GL_LINE);
-                        gl.CullFace(OpenGL.GL_BACK);
-                        gl.DrawElements(OpenGL.GL_TRIANGLES, masid.Length, OpenGL.GL_UNSIGNED_INT, (IntPtr)0);
-                    }
+                    gl.UseProgram(shaderProgram);
+                    loc = gl.GetUniformLocation(shaderProgram, "c");
+                    gl.Uniform4(loc, 1f, 1f, 1f, 1);
+
+                    gl.LineWidth(4);
+                    gl.PolygonMode(OpenGL.GL_FRONT_AND_BACK, OpenGL.GL_LINE);
+                    gl.CullFace(OpenGL.GL_BACK); 
+                    gl.DrawElements(OpenGL.GL_TRIANGLES, masid.Length, OpenGL.GL_UNSIGNED_INT, (IntPtr)0);
                 }
+
+                if (_points.Active)
+                {
+                    gl.BindVertexArray(VAO[2]);
+                    gl.UseProgram(shaderProgram);
+                    loc = gl.GetUniformLocation(shaderProgram, "model4f");
+                    gl.UniformMatrix4(loc, 1, false, Matrix4f.Identity.ToArray());
+                    loc = gl.GetUniformLocation(shaderProgram, "c");
+                    gl.Uniform4(loc, 1f, 0f, 0f, 1);
+                    gl.PointSize(6);
+                    gl.DrawArrays(OpenGL.GL_POINTS, 0, (int)VCount);
+                }
+
+                if (_norm.Active)
+                {
+                    gl.BindVertexArray(VAO[3]);
+                    gl.UseProgram(shaderProgram);
+                    loc = gl.GetUniformLocation(shaderProgram, "model4f");
+                    gl.UniformMatrix4(loc, 1, false, Matrix4f.Identity.ToArray());
+                    loc = gl.GetUniformLocation(shaderProgram, "c");
+                    gl.Uniform4(loc, 1f, 0f, 0f, 1);
+                    gl.LineWidth(2);
+                    gl.DrawArrays(OpenGL.GL_LINES, 0, (int)dr.Count * 2);
+                }
+                
+                if (_genp.Active)
+                {
+                    gl.BindVertexArray(VAO[4]);
+                    gl.UseProgram(shaderProgram);
+                    loc = gl.GetUniformLocation(shaderProgram, "c");
+                    gl.Uniform4(loc, 0f, 1f, 0f, 1);
+                    gl.PointSize(6);
+                    gl.DrawArrays(OpenGL.GL_POINTS, 0, (int)dr.Count);
+                }
+                
                 gl.BindVertexArray(0);
             };
              

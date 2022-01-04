@@ -26,6 +26,8 @@ uniform vec3 camera;
 uniform Material m;
 uniform Light l;
 
+uniform mat4 proj4f;
+
 void main() {
     
     vec3 position = vec3(view4f * vec4(l.position, 1) );

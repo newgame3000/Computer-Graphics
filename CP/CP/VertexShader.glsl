@@ -27,11 +27,12 @@ void main(void) {
         gl_Position.x *= cos(t);
 
         gl_Position.x = float(gl_Position.x * float(0.5 * float(width)));
-       gl_Position.y = gl_Position.y *(0.5 * height);
+        gl_Position.y = gl_Position.y *(0.5 * height);
         
         gl_Position = (proj4f * view4f * model4f) * gl_Position;
+        //gl_Position = (view4f * model4f) *  vec4(coord3f, 1.0);
     } else {
-          gl_Position = (proj4f * view4f * model4f) *  vec4(coord3f, 1.0); 
+        gl_Position = (proj4f * view4f * model4f) *  vec4(coord3f, 1.0); 
          //gl_Position = (view4f * model4f) *  vec4(coord3f, 1.0);
     }
     normalnf = normalize(vec3(view4f * model4f * vec4(normalf, 0.0)));
