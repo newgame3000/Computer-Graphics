@@ -17,6 +17,7 @@ using Window = Gtk.Window;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime;
 using CGPlatform;
 
 namespace CP
@@ -74,6 +75,23 @@ namespace CP
         [UI] private Adjustment _k = null;
         [UI] private Adjustment _beta1 = null;
         [UI] private Adjustment _beta2 = null;
+        [UI] private Adjustment _np = null;
+        [UI] private Adjustment _fp = null;
+        [UI] private Adjustment _pointx = null;
+        [UI] private Adjustment _pointy = null;
+        [UI] private Adjustment _pointz = null;
+        
+        [UI] private ComboBoxText _mouse = null;
+
+        [UI] private Button _addr = null;
+        [UI] private Button _addl = null;
+        [UI] private Button _adddown = null;
+        [UI] private Button _addup = null;
+        
+        [UI] private Button _remr = null;
+        [UI] private Button _reml = null;
+        [UI] private Button _remdown = null;
+        [UI] private Button _remup = null;
         
         [UI] private FileChooserButton _load = null;
         
@@ -126,7 +144,7 @@ namespace CP
         private float[] masver;
         private uint[] masid;
         private uint VCount = 0;
-        private Camera camera = new Camera(new Vector3(0, 0, 1), new Vector3(0, 0, 0), new Vector3(0, 1, 0));
+        private Camera camera = new Camera(new Vector3(0, 0, 5), new Vector3(0, 0, 0), new Vector3(0, 1, 0));
 
         private bool motion = false;
         private float Oldx = -1;
@@ -136,8 +154,10 @@ namespace CP
         private double width = 0;
         private double height = 0;
         private float startTime;
-        private int angle = 60;
-        
+        private int angle = 120;
+        private int pointid1 = -1;
+        private int pointid2 = -1;
+
         public MainWindow() : this(new Builder("MainWindow.glade"))
         {
         }
@@ -180,6 +200,7 @@ namespace CP
         float coeffB(int i, float u, float delta)
         {
             float b_i = 0;
+            i = i % 4;
             if (i == 0)
             {
                 b_i = 2 * (float) _beta1.Value * (float) _beta1.Value * (float) _beta1.Value * (1 - u) *
@@ -210,7 +231,7 @@ namespace CP
             return b_i;
         }
 
-        void Elementary_beta_spline(float du, float dv, float delta, int k1, int k2)
+        void Elementary_beta_spline(float du, float dv, float delta, int k1, int k2, int p)
         {
             float u = 0;
             float v = 0;
@@ -222,10 +243,10 @@ namespace CP
                     Vector3 res = new Vector3(0, 0, 0);
                     for (int i = k1; i < k1 + 4; ++i)
                     {
-                        float b_i = coeffB(i, u, delta);
+                        float b_i = coeffB(i - k1, u, delta);
                         for (int j = k2; j < k2 + 4; ++j)
                         {
-                            float b_j = coeffB(j, v, delta);
+                            float b_j = coeffB(j - k2, v, delta);
                             
                             res.X += b_i * b_j * Verticies[i][j].Point.X;
                             res.Y += b_i * b_j * Verticies[i][j].Point.Y;
@@ -242,6 +263,32 @@ namespace CP
                 v = 0;
                 u += du;
             }
+
+            p = p * ((int)_u.Value + 1) * ((int)_v.Value + 1);
+            
+            for (int i = 0; i < (int) _u.Value; ++i)
+            {
+                for (int j = 0; j < (int) _v.Value; ++j)
+                {
+                    Polygons.Add(new Polygon());
+                    Polygons[Polygons.Count - 1].points.Add(dr[i * ((int)_v.Value + 1) + j + p]);
+                    Polygons[Polygons.Count - 1].points.Add(dr[i * ((int)_v.Value + 1) + j + 1 + p]);
+                    Polygons[Polygons.Count - 1].points.Add(dr[i * ((int)_v.Value + 1) + j + (int)_v.Value + 1 + p]);
+                    
+                    dr[i * ((int)_v.Value + 1) + j + p].polygons.Add(Polygons[Polygons.Count - 1]);
+                    dr[i * ((int)_v.Value + 1) + j + 1 + p].polygons.Add(Polygons[Polygons.Count - 1]);
+                    dr[i * ((int)_v.Value + 1) + j + ((int)_v.Value + 1) + p].polygons.Add(Polygons[Polygons.Count - 1]);
+                    
+                    Polygons.Add(new Polygon());
+                    Polygons[Polygons.Count - 1].points.Add(dr[i * ((int)_v.Value + 1) + j + 1 + p]);
+                    Polygons[Polygons.Count - 1].points.Add(dr[i * ((int)_v.Value + 1) + j + 1 + (int)_v.Value + 1 + p]);
+                    Polygons[Polygons.Count - 1].points.Add(dr[i * ((int)_v.Value + 1) + j +  (int)_v.Value + 1 + p]);
+               
+                    dr[i * ((int)_v.Value + 1) + j + 1 + p].polygons.Add(Polygons[Polygons.Count - 1]);
+                    dr[i * ((int)_v.Value + 1) + 1 + j +((int)_v.Value + 1) + p].polygons.Add(Polygons[Polygons.Count - 1]);
+                    dr[i * ((int)_v.Value + 1) + j + ((int)_v.Value + 1) + p].polygons.Add(Polygons[Polygons.Count - 1]);
+                }
+            }
         }
 
 
@@ -256,42 +303,18 @@ namespace CP
                           4 * (float) _beta1.Value * (float) _beta1.Value + 4 * (float) _beta1.Value +
                           (float) _beta2.Value + 2;
 
+            
+            Polygons = new List<Polygon>();
 
+            int p = 0;
             for (int i = 0; i < Verticies.Count - 3; ++i)
             {
                 for (int j = 0; j < Verticies[i].Count - 3; ++j)
-                {
-                    Elementary_beta_spline(du, dv, delta, i, j);
+                { Elementary_beta_spline(du, dv, delta, i, j, p);
+                    p += 1;
                 }
             }
             
-
-            Polygons = new List<Polygon>();
-
-            for (int i = 0; i < (int) _u.Value; ++i)
-            {
-                for (int j = 0; j < (int) _v.Value; ++j)
-                {
-                    Polygons.Add(new Polygon());
-                    Polygons[Polygons.Count - 1].points.Add(dr[i * ((int)_v.Value + 1) + j]);
-                    Polygons[Polygons.Count - 1].points.Add(dr[i * ((int)_v.Value + 1) + j + 1]);
-                    Polygons[Polygons.Count - 1].points.Add(dr[i * ((int)_v.Value + 1) + j + (int)_v.Value + 1]);
-                    
-                    dr[i * ((int)_v.Value + 1) + j].polygons.Add(Polygons[Polygons.Count - 1]);
-                    dr[i * ((int)_v.Value + 1) + j + 1].polygons.Add(Polygons[Polygons.Count - 1]);
-                    dr[i * ((int)_v.Value + 1) + j + ((int)_v.Value + 1)].polygons.Add(Polygons[Polygons.Count - 1]);
-                    
-                    Polygons.Add(new Polygon());
-                    Polygons[Polygons.Count - 1].points.Add(dr[i * ((int)_v.Value + 1) + j + 1]);
-                    Polygons[Polygons.Count - 1].points.Add(dr[i * ((int)_v.Value + 1) + j + 1 + (int)_v.Value + 1]);
-                    Polygons[Polygons.Count - 1].points.Add(dr[i * ((int)_v.Value + 1) + j +  (int)_v.Value + 1]);
-               
-                    dr[i * ((int)_v.Value + 1) + j + 1].polygons.Add(Polygons[Polygons.Count - 1]);
-                    dr[i * ((int)_v.Value + 1) + 1 + j +((int)_v.Value + 1)].polygons.Add(Polygons[Polygons.Count - 1]);
-                    dr[i * ((int)_v.Value + 1) + j + ((int)_v.Value + 1)].polygons.Add(Polygons[Polygons.Count - 1]);
-                }
-
-            }
             
             foreach (var pol in Polygons)
             { 
@@ -416,6 +439,120 @@ namespace CP
             _k.ValueChanged += ValueChanged;
             _showLight.Toggled += ValueChanged;
             _animation.Toggled += ValueChanged;
+            _np.ValueChanged += ValueChanged;
+            _fp.ValueChanged += ValueChanged;
+
+            _pointx.ValueChanged +=  MotionPointX;
+            _pointy.ValueChanged +=  MotionPointY;
+            _pointz.ValueChanged +=  MotionPointZ;
+            
+            _addr.Clicked += delegate(object? sender, EventArgs args)
+            {
+                for (int i = 0; i < Verticies.Count; ++i)
+                {
+                    Verticies[i].Add(new Vertex(Verticies[i][Verticies[i].Count - 1].Point.X + 1, Verticies[i][Verticies[i].Count - 1].Point.Y + 1, Verticies[i][Verticies[i].Count - 1].Point.Z + 1));
+                }
+
+                VCount += (uint)Verticies.Count;
+                Figure();
+                _drawingArea.QueueRender();
+            };
+            
+            _addl.Clicked += delegate(object? sender, EventArgs args)
+            {
+                for (int i = 0; i < Verticies.Count; ++i)
+                {
+                    Verticies[i].Insert(0, new Vertex(Verticies[i][0].Point.X - 1, Verticies[i][0].Point.Y - 1, Verticies[i][0].Point.Z - 1));
+                }
+
+                VCount += (uint)Verticies.Count;
+                Figure();
+                _drawingArea.QueueRender();
+            };
+            
+            _adddown.Clicked += delegate(object? sender, EventArgs args)
+            {
+                List<Vertex> a = new List<Vertex>();
+
+                for (int i = 0; i < Verticies[Verticies.Count - 1].Count; ++i)
+                {
+                    a.Add(new Vertex(Verticies[Verticies.Count - 1][i].Point.X - 1, Verticies[Verticies.Count - 1][i].Point.Y - 1, Verticies[Verticies.Count - 1][i].Point.Z - 1));
+                }
+                
+                Verticies.Add(a);
+                VCount += (uint) Verticies[Verticies.Count - 1].Count;
+                Figure();
+                _drawingArea.QueueRender();
+
+            };
+            
+            _addup.Clicked += delegate(object? sender, EventArgs args)
+            {
+                List<Vertex> a = new List<Vertex>();
+                for (int i = 0; i < Verticies[0].Count; ++i)
+                {
+                    a.Add( new Vertex(Verticies[0][i].Point.X + 1, Verticies[0][i].Point.Y + 1, Verticies[0][i].Point.Z + 1));
+                }
+                
+                Verticies.Insert(0, a);
+                VCount += (uint) Verticies[0].Count;
+                Figure();
+                _drawingArea.QueueRender();
+                
+            };
+            
+            _remr.Clicked += delegate(object? sender, EventArgs args)
+            {
+
+                if (Verticies[0].Count > 4)
+                {
+                    for (int i = 0; i < Verticies.Count; ++i)
+                    {
+                        Verticies[i].RemoveAt(Verticies[i].Count - 1);
+                    }
+
+                    VCount -= (uint) Verticies.Count;
+                    Figure();
+                    _drawingArea.QueueRender();
+                }
+            };
+            
+            _reml.Clicked += delegate(object? sender, EventArgs args)
+            {
+                if (Verticies[0].Count > 4)
+                {
+                    for (int i = 0; i < Verticies.Count; ++i)
+                    {
+                        Verticies[i].RemoveAt(0);
+                    }
+
+                    VCount -= (uint) Verticies.Count;
+                    Figure();
+                    _drawingArea.QueueRender();
+                }
+            };
+            
+            _remdown.Clicked += delegate(object? sender, EventArgs args)
+            {
+                if (Verticies.Count > 4)
+                {
+                    Verticies.RemoveAt(Verticies.Count - 1);
+                    VCount -= (uint) Verticies[Verticies.Count - 1].Count;
+                    Figure();
+                    _drawingArea.QueueRender();
+                }
+            };
+            
+            _remup.Clicked += delegate(object? sender, EventArgs args)
+            {
+                if (Verticies.Count > 4)
+                {
+                    Verticies.RemoveAt(0);
+                    VCount -= (uint) Verticies[0].Count;
+                    Figure();
+                    _drawingArea.QueueRender();
+                }
+            };
 
             _drawingArea.ScrollEvent += (o, args) =>
            {
@@ -441,11 +578,47 @@ namespace CP
             _load.FileSet += LoadFile;
             _load.FileActivated += LoadFile;
             
-           DeleteEvent += Window_DeleteEvent;
+            _mouse.Append("rotation", "Вращение камерой");
+            _mouse.Append("shift", "Перемещение точек");
+            _mouse.Active = 0;
+
+            DeleteEvent += Window_DeleteEvent;
+        }
+
+        private void  MotionPointX(object? sender, EventArgs e)
+        {
+            if (pointid1 != -1 && pointid2 != -1)
+            {
+                Verticies[pointid1][pointid2].Point.X = (float)_pointx.Value;
+                Figure();
+                _drawingArea.QueueRender();
+            }
+        }
+        
+        private void  MotionPointY(object? sender, EventArgs e)
+        {
+            if (pointid1 != -1 && pointid2 != -1)
+            {
+                Verticies[pointid1][pointid2].Point.Y = (float)_pointy.Value;
+                Figure();
+                _drawingArea.QueueRender();
+            }
+        }
+        
+        private void  MotionPointZ(object? sender, EventArgs e)
+        {
+            if (pointid1 != -1 && pointid2 != -1)
+            {
+                Verticies[pointid1][pointid2].Point.Z = (float)_pointz.Value;
+                Figure();
+                _drawingArea.QueueRender();
+            }
         }
 
         private void LoadFile(object? sender, EventArgs e)
         {
+            pointid1 = -1;
+            pointid2 = -1;
             StreamReader file = new StreamReader(_load.Filename);
             string s = "";
             VCount = 0;
@@ -481,7 +654,6 @@ namespace CP
                     VCount += 1;
                 }
             }
-            
             _u.Value = u;
             _v.Value = v;
             _beta1.Value = beta1;
@@ -504,6 +676,77 @@ namespace CP
                 0, 0, (float)-1.0, (float)1.0
             );
             return t1;
+        }
+
+        private Matrix4f Model() {
+           var model = Matrix4f.Identity;
+            model[1, 1] = (float)_scaleX.Value;;
+            model[2, 2] = (float)_scaleY.Value;
+            model[3, 3] = (float)_scaleZ.Value;
+            model[4, 4] = 1;
+
+            var rx = Matrix4f.Identity;
+            rx[1, 1] = 1;
+            rx[2, 2] = (float)Math.Cos((float)(_rotationX.Value * Math.PI / 180));
+            rx[3, 3] = (float)Math.Cos((float)(_rotationX.Value * Math.PI / 180));
+            rx[2, 3] = -(float)Math.Sin((float)(_rotationX.Value * Math.PI / 180));
+            rx[3, 2] = (float)Math.Sin((float)(_rotationX.Value * Math.PI / 180));
+            rx[4, 4] = 1;
+                
+            var ry = Matrix4f.Identity;
+            ry[2, 2] = 1;
+            ry[1, 1] = (float)Math.Cos((float)(_rotationY.Value * Math.PI / 180));
+            ry[3, 3] = (float)Math.Cos((float)(_rotationY.Value * Math.PI / 180));
+            ry[1, 3] = (float)Math.Sin((float)(_rotationY.Value * Math.PI / 180));
+            ry[3, 1] = -(float)Math.Sin((float)(_rotationY.Value * Math.PI / 180));
+            ry[4, 4] = 1;
+                
+            var rz = Matrix4f.Identity;
+
+            rz[3, 3] = 1;
+            rz[4, 4] = 1;
+            rz[1, 1] = (float)Math.Cos((float)(_rotationZ.Value * Math.PI / 180));
+            rz[2, 2] = (float)Math.Cos((float)(_rotationZ.Value * Math.PI / 180));
+            rz[1, 2] = -(float)Math.Sin((float)(_rotationZ.Value * Math.PI / 180));
+            rz[2, 1] = (float)Math.Sin((float)(_rotationZ.Value * Math.PI / 180));
+
+            model = rx * ry * rz * model;
+                
+            model[4, 1] = -(float)_shiftX.Value;
+            model[4, 2] = (float)_shiftY.Value;
+            model[4, 3] = (float) _shiftZ.Value;
+
+            return model;
+        }
+
+        private Matrix4f View()
+        {
+            var view = Matrix4f.Identity;
+            Vector3 cameraDirection = (camera.Position - camera.Target);
+            cameraDirection = Vector3.Normalize(cameraDirection);
+            Vector3 cameraRight = Vector3.Cross(camera.Up, cameraDirection);
+            cameraRight = Vector3.Normalize(cameraRight);
+
+            view[1, 1] = cameraRight.X;
+            view[1, 2] = cameraRight.Y;
+            view[1, 3] = cameraRight.Z;
+
+            view[2, 1] = camera.Up.X;
+            view[2, 2] = camera.Up.Y;
+            view[2, 3] = camera.Up.Z;
+
+            view[3, 1] = cameraDirection.X;
+            view[3, 2] = cameraDirection.Y;
+            view[3, 3] = cameraDirection.Z;
+            view[4, 4] = 1;
+
+            var view2 = Matrix4f.Identity;
+            view2[1, 4] = -camera.Position.X;
+            view2[2, 4] = -camera.Position.Y;
+            view2[3, 4] = -camera.Position.Z;
+
+            view = view * view2;
+            return view;
         }
 
         private void CposXValueChanged(object? sender, EventArgs e)
@@ -591,19 +834,19 @@ namespace CP
             
             
             Verticies.Add(new List<Vertex> {
-                new(-1, 0, -1), new((float)-0.33 , 0, -1), new((float)0.33, 0, -1), new(1, 0, -1)
+                new(-1, 0, -1), new((float)-2 , 0, -1), new((float)2, 0, -1), new(1, 0, -1)
             });
             
             Verticies.Add(new List<Vertex> {
-               new(-1, 0, (float)-0.33), new((float)-0.33, 0, (float)-0.33), new((float)0.33, 0, (float)-0.33), new(1, 0, (float)-0.33)
+               new(-1, 0, (float)-2), new((float)-2, 0, (float)-2), new((float)2, 0, (float)-2), new(1, 0, (float)-2)
             });
             
             Verticies.Add(new List<Vertex> {
-                new(-1, 0, (float)0.33), new((float)-0.33, 0, (float)0.33), new((float)0.33, 0, (float)0.33), new(1, 0, (float)0.33)
+                new(-1, 0, (float)2), new((float)-2, 0, (float)2), new((float)2, 0, (float)2), new(1, 0, (float)2)
             });
             
             Verticies.Add(new List<Vertex> {
-                 new(-1, 0, 1), new((float)-0.33, 0, 1), new((float)0.33 , 0, 1), new(1, 0, 1)
+                 new(-1, 0, 1), new((float)-2, 0, 1), new((float)2 , 0, 1), new(1, 0, 1)
             });
 
             VCount = 16;
@@ -611,10 +854,10 @@ namespace CP
 
             Figure();
 
-            uint[] VAO = new uint[5];
-            uint[] VBO = new uint[6];
-            gl.GenVertexArrays(5, VAO);
-            gl.GenBuffers(6, VBO);
+            uint[] VAO = new uint[8];
+            uint[] VBO = new uint[9];
+            gl.GenVertexArrays(8, VAO);
+            gl.GenBuffers(9, VBO);
             _drawingArea.Render += (o, args) =>
             {
                 
@@ -675,25 +918,18 @@ namespace CP
                 gl.BindVertexArray(VAO[3]);
                 gl.BindBuffer(OpenGL.GL_ARRAY_BUFFER, VBO[4]);
                 gl.EnableVertexAttribArray(0);
-                float[] nrml = new float[dr.Count * 6];
-                t = 0;
-                for (int i = 0; i < dr.Count; ++i)
+                float[] pt = new float[3];
+
+                if (pointid1 != -1 && pointid2 != -1)
                 {
-                        nrml[t] = dr[i].Point.X;
-                        t += 1;
-                        nrml[t] = dr[i].Point.Y;
-                        t += 1;
-                        nrml[t] = dr[i].Point.Z;
-                        t += 1;
-                        nrml[t] = dr[i].NormalInWorldSpace.X;
-                        t += 1;
-                        nrml[t] = dr[i].NormalInWorldSpace.Y;
-                        t += 1;
-                        nrml[t] = dr[i].NormalInWorldSpace.Z;
-                        t += 1;
+                    pt[0] = Verticies[pointid1][pointid2].Point.X;
+                    pt[1] = Verticies[pointid1][pointid2].Point.Y;
+                    pt[2] = Verticies[pointid1][pointid2].Point.Z;
                 }
+                
+               
                 gl.VertexAttribPointer(0, 3, OpenGL.GL_FLOAT, false, 0, IntPtr.Zero);
-                gl.BufferData(OpenGL.GL_ARRAY_BUFFER, nrml , OpenGL.GL_DYNAMIC_DRAW);
+                gl.BufferData(OpenGL.GL_ARRAY_BUFFER,pt , OpenGL.GL_DYNAMIC_DRAW);
                 gl.BindVertexArray(0);
                 
                 gl.BindVertexArray(VAO[4]);
@@ -714,6 +950,42 @@ namespace CP
                 gl.BufferData(OpenGL.GL_ARRAY_BUFFER, gen , OpenGL.GL_DYNAMIC_DRAW);
                 gl.BindVertexArray(0);
                 
+                gl.BindVertexArray(VAO[5]);
+                gl.BindBuffer(OpenGL.GL_ARRAY_BUFFER, VBO[6]);
+                gl.EnableVertexAttribArray(0);
+                float[] x = new float[]
+                {
+                    0, 0, 0,
+                    1, 0, 0
+                };
+                gl.VertexAttribPointer(0, 3, OpenGL.GL_FLOAT, false, 0, IntPtr.Zero);
+                gl.BufferData(OpenGL.GL_ARRAY_BUFFER, x , OpenGL.GL_DYNAMIC_DRAW);
+                gl.BindVertexArray(0);
+                
+                gl.BindVertexArray(VAO[6]);
+                gl.BindBuffer(OpenGL.GL_ARRAY_BUFFER, VBO[7]);
+                gl.EnableVertexAttribArray(0);
+                float[] y = new float[]
+                {
+                    0, 0, 0,
+                    0, 1, 0
+                };
+                gl.VertexAttribPointer(0, 3, OpenGL.GL_FLOAT, false, 0, IntPtr.Zero);
+                gl.BufferData(OpenGL.GL_ARRAY_BUFFER, y , OpenGL.GL_DYNAMIC_DRAW);
+                gl.BindVertexArray(0);
+                
+                gl.BindVertexArray(VAO[7]);
+                gl.BindBuffer(OpenGL.GL_ARRAY_BUFFER, VBO[8]);
+                gl.EnableVertexAttribArray(0);
+                float[] z = new float[]
+                {
+                    0, 0, 0,
+                    0, 0, 1
+                };
+                gl.VertexAttribPointer(0, 3, OpenGL.GL_FLOAT, false, 0, IntPtr.Zero);
+                gl.BufferData(OpenGL.GL_ARRAY_BUFFER, z , OpenGL.GL_DYNAMIC_DRAW);
+                gl.BindVertexArray(0);
+                
                 
                 gl.FrontFace(OpenGL.GL_CW);
 
@@ -731,62 +1003,23 @@ namespace CP
                 gl.ClearColor(0.8f, 0.8f, 0.8f, 1);
                 
                 gl.Clear(OpenGL.GL_COLOR_BUFFER_BIT | OpenGL.GL_DEPTH_BUFFER_BIT);
+                
+                var proj = Perspective(angle, (double)width / height, _np.Value, _fp.Value);
 
-                
-                // var proj = Matrix4f.Identity;
-                // gl.MatrixMode(OpenGL.GL_PROJECTION);
-                var proj = Perspective(angle, (double)width / height, 1, 100);
-                // proj[0, 0] = Math.Min(height / width, 1);
-                // proj[1, 1] = Math.Min(width / height, 1);
-                //gl.LoadMatrix(proj);
-                
-                
-                
                 int loc = gl.GetUniformLocation(shaderProgram, "proj4f");
                 gl.UniformMatrix4(loc, 1, false, proj.ToArray());
+                loc = gl.GetUniformLocation(shaderProgram, "axies");
+                gl.Uniform1(loc, 0);
                 
                 gl.UseProgram(lightProgram);
                 loc = gl.GetUniformLocation(lightProgram, "proj4f");
                 gl.UniformMatrix4(loc, 1, false, proj.ToArray());
+                loc = gl.GetUniformLocation(lightProgram, "axies");
+                gl.Uniform1(loc, 0);
                 
                 gl.UseProgram(shaderProgram);
 
-                var model = Matrix4f.Identity;
-                model[1, 1] = (float)_scaleX.Value;;
-                model[2, 2] = (float)_scaleY.Value;
-                model[3, 3] = (float)_scaleZ.Value;
-                model[4, 4] = 1;
-
-                var rx = Matrix4f.Identity;
-                rx[1, 1] = 1;
-                rx[2, 2] = (float)Math.Cos((float)(_rotationX.Value * Math.PI / 180));
-                rx[3, 3] = (float)Math.Cos((float)(_rotationX.Value * Math.PI / 180));
-                rx[2, 3] = -(float)Math.Sin((float)(_rotationX.Value * Math.PI / 180));
-                rx[3, 2] = (float)Math.Sin((float)(_rotationX.Value * Math.PI / 180));
-                rx[4, 4] = 1;
-                
-                var ry = Matrix4f.Identity;
-                ry[2, 2] = 1;
-                ry[1, 1] = (float)Math.Cos((float)(_rotationY.Value * Math.PI / 180));
-                ry[3, 3] = (float)Math.Cos((float)(_rotationY.Value * Math.PI / 180));
-                ry[1, 3] = (float)Math.Sin((float)(_rotationY.Value * Math.PI / 180));
-                ry[3, 1] = -(float)Math.Sin((float)(_rotationY.Value * Math.PI / 180));
-                ry[4, 4] = 1;
-                
-                var rz = Matrix4f.Identity;
-
-                rz[3, 3] = 1;
-                rz[4, 4] = 1;
-                rz[1, 1] = (float)Math.Cos((float)(_rotationZ.Value * Math.PI / 180));
-                rz[2, 2] = (float)Math.Cos((float)(_rotationZ.Value * Math.PI / 180));
-                rz[1, 2] = -(float)Math.Sin((float)(_rotationZ.Value * Math.PI / 180));
-                rz[2, 1] = (float)Math.Sin((float)(_rotationZ.Value * Math.PI / 180));
-
-                model = rx * ry * rz * model;
-                
-                model[4, 1] = -(float)_shiftX.Value;
-                model[4, 2] = (float)_shiftY.Value;
-                model[4, 3] = (float) _shiftZ.Value;
+                var model = Model();
                 
                 gl.UseProgram(shaderProgram);
                 loc = gl.GetUniformLocation(shaderProgram, "model4f");
@@ -795,36 +1028,8 @@ namespace CP
                 gl.UseProgram(lightProgram);
                 loc = gl.GetUniformLocation(lightProgram, "model4f");
                 gl.UniformMatrix4(loc, 1, false, model.ToArray());
-                
-                // gl.LoadMatrix(pMatrix.ToArray(true));
-                
-                
-                var view = Matrix4f.Identity;
-                Vector3 cameraDirection = (camera.Position - camera.Target);
-                cameraDirection = Vector3.Normalize(cameraDirection);
-                Vector3 cameraRight = Vector3.Cross(camera.Up, cameraDirection);
-                cameraRight = Vector3.Normalize(cameraRight);
-                
-                view[1, 1] = cameraRight.X;
-                view[1, 2] = cameraRight.Y;
-                view[1, 3] = cameraRight.Z;
 
-                view[2, 1] = camera.Up.X;
-                view[2, 2] = camera.Up.Y;
-                view[2, 3] = camera.Up.Z;
-                
-                view[3, 1] = cameraDirection.X;
-                view[3, 2] = cameraDirection.Y;
-                view[3, 3] = cameraDirection.Z;
-                view[4, 4] = 1;
-                
-                var view2 = Matrix4f.Identity;
-                view2[1, 4] = -camera.Position.X;
-                view2[2, 4] = -camera.Position.Y;
-                view2[3, 4] = -camera.Position.Z;
-                
-                view = view * view2;
-
+                var view = View();
 
                 gl.UseProgram(shaderProgram);
                 loc = gl.GetUniformLocation(shaderProgram, "view4f");
@@ -964,16 +1169,16 @@ namespace CP
                     gl.DrawArrays(OpenGL.GL_POINTS, 0, (int)VCount);
                 }
 
-                if (_norm.Active)
+                if (pointid1 != -1 && pointid2 != -1)
                 {
                     gl.BindVertexArray(VAO[3]);
                     gl.UseProgram(shaderProgram);
                     loc = gl.GetUniformLocation(shaderProgram, "model4f");
                     gl.UniformMatrix4(loc, 1, false, Matrix4f.Identity.ToArray());
                     loc = gl.GetUniformLocation(shaderProgram, "c");
-                    gl.Uniform4(loc, 1f, 0f, 0f, 1);
-                    gl.LineWidth(2);
-                    gl.DrawArrays(OpenGL.GL_LINES, 0, (int)dr.Count * 2);
+                    gl.Uniform4(loc, 0f, 0.5f, 0.5f, 1);
+                    gl.PointSize(7);
+                    gl.DrawArrays(OpenGL.GL_POINTS, 0, 1);
                 }
                 
                 if (_genp.Active)
@@ -985,7 +1190,33 @@ namespace CP
                     gl.PointSize(6);
                     gl.DrawArrays(OpenGL.GL_POINTS, 0, (int)dr.Count);
                 }
+
+                gl.UseProgram(shaderProgram);
+                loc = gl.GetUniformLocation(shaderProgram, "axies");
+                gl.Uniform1(loc, 1);
                 
+                loc = gl.GetUniformLocation(shaderProgram, "shift");
+                gl.Uniform1(loc, 0.8f);
+
+                gl.BindVertexArray(VAO[5]);
+                loc = gl.GetUniformLocation(shaderProgram, "c");
+                gl.Uniform4(loc, 1f, 0f, 0f, 1);
+                gl.LineWidth(4);
+                gl.DrawArrays(OpenGL.GL_LINES, 0, 2);
+                
+                gl.BindVertexArray(VAO[6]);
+                loc = gl.GetUniformLocation(shaderProgram, "c");
+                gl.Uniform4(loc, 0f, 1f, 0f, 1);
+                gl.LineWidth(4);
+                gl.DrawArrays(OpenGL.GL_LINES, 0, 2);
+                
+                gl.BindVertexArray(VAO[7]);
+                loc = gl.GetUniformLocation(shaderProgram, "c");
+                gl.Uniform4(loc, 0f, 0f, 1f, 1);
+                gl.LineWidth(4);
+                gl.DrawArrays(OpenGL.GL_LINES, 0, 2);
+                
+
                 gl.BindVertexArray(0);
             };
              
@@ -1023,34 +1254,111 @@ namespace CP
         {
             if (motion)
             {
-                dY = (float) args.Event.X - Oldx;
-                dX = (float) args.Event.Y - Oldy;
-                Vector3 cameraDirection = (camera.Position - camera.Target);
-                cameraDirection = Vector3.Normalize(cameraDirection);
-                Vector3 cameraRight = Vector3.Cross(camera.Up, cameraDirection);
-                cameraRight = Vector3.Normalize(cameraRight);
-                
-                var matrix1 = Matrix4x4.CreateFromAxisAngle(cameraRight, -0.01f * dX);
-                var matrix2 = Matrix4x4.CreateFromAxisAngle(camera.Up, -0.01f * dY);
-                
-                var npos = Vector3.Transform(camera.Position, matrix2 * matrix1);
-                camera.Up = Vector3.Normalize(Vector3.Transform(camera.Up, matrix1));
-                camera.Position = Vector3.Normalize(npos) * camera.Position.Length();
-                _drawingArea.QueueDraw();
-                
-                Oldx = (float) args.Event.X;
-                Oldy = (float) args.Event.Y;
+                if (_mouse.ActiveText == "Вращение камерой")
+                {
+                    dY = (float) args.Event.X - Oldx;
+                    dX = (float) args.Event.Y - Oldy;
+                    Vector3 cameraDirection = (camera.Position - camera.Target);
+                    cameraDirection = Vector3.Normalize(cameraDirection);
+                    Vector3 cameraRight = Vector3.Cross(camera.Up, cameraDirection);
+                    cameraRight = Vector3.Normalize(cameraRight);
 
-                _cposX.Value = camera.Position.X;
-                _cposY.Value = camera.Position.Y;
-                _cposZ.Value = camera.Position.Z;
+                    var matrix1 = Matrix4x4.CreateFromAxisAngle(cameraRight, -0.01f * dX);
+                    var matrix2 = Matrix4x4.CreateFromAxisAngle(camera.Up, -0.01f * dY);
+
+                    var npos = Vector3.Transform(camera.Position, matrix2 * matrix1);
+                    camera.Up = Vector3.Normalize(Vector3.Transform(camera.Up, matrix1));
+                    camera.Position = Vector3.Normalize(npos) * camera.Position.Length();
+                    _drawingArea.QueueDraw();
+
+                    Oldx = (float) args.Event.X;
+                    Oldy = (float) args.Event.Y;
+
+                    _cposX.Value = camera.Position.X;
+                    _cposY.Value = camera.Position.Y;
+                    _cposZ.Value = camera.Position.Z;
+                }
+
+                if (_mouse.ActiveText == "Перемещение точек")
+                {
+                    dX = (float)(args.Event.X / width * 2 - 1) - Oldx;
+                    dY = (float) (1 - (float)args.Event.Y / height * 2) - Oldy;
+
+                    Vector3 cameraDirection = (camera.Position - camera.Target);
+                    cameraDirection = Vector3.Normalize(cameraDirection);
+                    Vector3 cameraRight = Vector3.Cross(camera.Up, cameraDirection);
+                    cameraRight = Vector3.Normalize(cameraRight);
+
+                    dX /= 50;
+                    dY /= 50;
+                    
+                    Vector3 v = new Vector3();
+
+                    v = Verticies[pointid1][pointid2].Point +  camera.Up * (float)(width / height) * dY + cameraRight * dX;
+                    
+                    Verticies[pointid1][pointid2].Point = v;
+                    
+                    _pointx.Value = Verticies[pointid1][pointid2].Point.X;
+                    _pointy.Value = Verticies[pointid1][pointid2].Point.Y;
+                    _pointz.Value = Verticies[pointid1][pointid2].Point.Z;
+                    
+                     Figure();
+                    _drawingArea.QueueRender();
+                }
             }
         }
         private void DrawingAreaOnButtonPressEvent(object o, ButtonPressEventArgs args)
         {
             motion = true;
-            Oldx = (float) args.Event.X;
-            Oldy = (float) args.Event.Y;
+
+            if (_mouse.ActiveText == "Вращение камерой")
+            {
+                Oldx = (float) args.Event.X;
+                Oldy = (float) args.Event.Y;
+            }
+
+            if (_mouse.ActiveText == "Перемещение точек")
+            {
+                var proj = Perspective(angle, width / height, _np.Value, _fp.Value);
+                var model = Model();
+                var view = View();
+                
+                Oldx = (float)(args.Event.X / width * 2 - 1);
+                Oldy = (float)(1 - (float)args.Event.Y / height * 2);
+            
+                float min = 999999;
+                
+                for (int i = 0; i < Verticies.Count; ++i)
+                {
+                    for (int j = 0; j < Verticies[i].Count; ++j)
+                    {
+                        Vector4f vec = new Vector4f(Verticies[i][j].Point.X, Verticies[i][j].Point.Y,
+                            Verticies[i][j].Point.Z, 1);
+
+                        vec = proj * view * model * vec;
+
+                        vec.X /= vec.W;
+                        vec.Y /= vec.W;
+                        vec.Z /= vec.W;
+                        vec.W /= vec.W;
+
+                        float dist = (float) Math.Sqrt((Oldx - vec.X) * (Oldx - vec.X) +
+                                                       (Oldy - vec.Y) * (Oldy - vec.Y));
+            
+                        if (dist < min)
+                        {
+                            pointid1 = i;
+                            pointid2 = j;
+                            min = dist;
+                        }
+                    }
+                }
+
+                _pointx.Value = Verticies[pointid1][pointid2].Point.X;
+                _pointy.Value = Verticies[pointid1][pointid2].Point.Y;
+                _pointz.Value = Verticies[pointid1][pointid2].Point.Z;
+
+            }
         }
         private void DrawingAreaOnButtonReleaseEvent(object o, ButtonReleaseEventArgs args)
         {
